@@ -77,7 +77,7 @@ def define_model() -> tf.keras.Model:
 
 if __name__ == "__main__":
     (profiling_traces, profiling_labels,
-     validation_traces, validation_labels) = load_traces_from_file("ASCAD_stored_traces.h5")
+     validation_traces, validation_labels) = load_traces_from_file("../data/traces/ASCAD_stored_traces.h5")
 
     tf.config.list_physical_devices('GPU')  # checking the availability of GPU
 
@@ -91,17 +91,17 @@ if __name__ == "__main__":
                   metrics=['accuracy'])
 
     # workers = 8
-    batch_size = 200
+    batch_size = 128
     num_classes = 256
-    epochs = 10
+    epochs = 100
+
+    weights_file_name = sys.argv[1]
 
     model.fit(profiling_traces,
               to_categorical(profiling_labels, num_classes),
               validation_data=(validation_traces, to_categorical(validation_labels, num_classes)),
               epochs=epochs,
               batch_size=batch_size)
-
-    weights_file_name = sys.argv[1]
 
     model.save_weights(weights_file_name)    # save weights returned by the model
 
