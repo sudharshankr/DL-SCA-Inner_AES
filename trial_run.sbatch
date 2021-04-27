@@ -4,7 +4,7 @@
 # job-array example #
 #####################
 
-#SBATCH --job-name=cnn_trial
+#SBATCH --job-name=cnn_trial2
 #SBATCH --qos=short
 #SBATCH --time=0-04:00:00
 
@@ -22,6 +22,7 @@ module list
 #
 cd /home/nfs/sudharshankuma/
 source env/bin/activate
+cd python_scripts/
 #
-srun python3 sca_dl_train_model.py
+srun python3 sca_dl_train_model.py cnn_hw_1.h5
 exit 0
