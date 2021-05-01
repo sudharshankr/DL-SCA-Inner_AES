@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 from tensorflow.keras import layers
 
-# from sca_dl_train_model import define_model
 
 AES_Sbox = np.array([
     0x63, 0x7C, 0x77, 0x7B, 0xF2, 0x6B, 0x6F, 0xC5, 0x30, 0x01, 0x67, 0x2B, 0xFE, 0xD7, 0xAB, 0x76,
@@ -27,6 +26,13 @@ AES_Sbox = np.array([
     0xE1, 0xF8, 0x98, 0x11, 0x69, 0xD9, 0x8E, 0x94, 0x9B, 0x1E, 0x87, 0xE9, 0xCE, 0x55, 0x28, 0xDF,
     0x8C, 0xA1, 0x89, 0x0D, 0xBF, 0xE6, 0x42, 0x68, 0x41, 0x99, 0x2D, 0x0F, 0xB0, 0x54, 0xBB, 0x16
 ])
+
+
+def hamming(n):
+    return bin(int(n)).count("1")
+
+
+v_hamming = np.vectorize(hamming)
 
 
 def load_attack_traces(filename: str, num_traces_test: int) -> (np.array, np.array, np.array):
@@ -89,7 +95,7 @@ def define_model() -> tf.keras.Model:
             # FC layer and output
             layers.Dense(4096, activation='relu'),
             layers.Dense(4096, activation='relu'),
-            layers.Dense(256, activation=tf.nn.log_softmax),
+            layers.Dense(9, activation=tf.nn.log_softmax),
         ]
     )
 
@@ -112,17 +118,17 @@ def run_attack(model: tf.keras.Model, attack_traces: np.array,
     rank_traces = []
     count = 0
 
-    for traces in range(0, attack_traces.shape[0], 200):
-        predictions = model.predict(attack_traces[count:count + 200])
-        plaintexts = attack_plaintexts[count:count + 200]
+    for traces in range(0, attack_traces.shape[0], 128):
+        predictions = model.predict(attack_traces[count:count + 128])
+        plaintexts = attack_plaintexts[count:count + 128]
         for j in range(len(predictions)):
             for k in range(256):
                 pt = plaintexts[j][byte_attacked]
-                proba = predictions[j][AES_Sbox[pt ^ k]]
+                proba = predictions[j][hamming(AES_Sbox[pt ^ k])]
                 P_k[k] += proba
             rank_traces.append(np.where(P_k.argsort()[::-1] == real_key)[0])
             traces_num.append(count)
-        count += 200
+        count += 128
 
     return rank_traces, traces_num, P_k
 
@@ -146,7 +152,7 @@ if __name__ == "__main__":
     model = define_model()
     weights_filename = sys.argv[1]
     model.load_weights(weights_filename)  # loading the weights into the model
-    (attack_traces, attack_plaintexts, attack_keys) = load_attack_traces('ASCAD_stored_traces.h5', 5000)
+    (attack_traces, attack_plaintexts, attack_keys) = load_attack_traces('../data/traces/ASCAD_stored_traces.h5', 5000)
 
     byte_attacked = 2
     real_key = attack_keys[0][byte_attacked]  # for fixed keys
