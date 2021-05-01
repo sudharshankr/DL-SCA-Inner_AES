@@ -68,7 +68,7 @@ def define_model() -> tf.keras.Model:
             # FC layer and output
             layers.Dense(4096, activation='relu'),
             layers.Dense(4096, activation='relu'),
-            layers.Dense(256, activation=tf.nn.log_softmax),
+            layers.Dense(9, activation='softmax'),
         ]
     )
 
@@ -92,7 +92,7 @@ if __name__ == "__main__":
 
     # workers = 8
     batch_size = 128
-    num_classes = 256
+    num_classes = 9
     epochs = 100
 
     weights_file_name = sys.argv[1]
