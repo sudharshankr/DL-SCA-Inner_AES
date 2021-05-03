@@ -1,8 +1,7 @@
-import trsfile
 import matplotlib.pyplot as plt
 import numpy as np
+
 from make_traces import LabelledTraces
-import struct
 import Trace as trs
 
 
@@ -20,9 +19,20 @@ def determineTrsSampleCoding(ts):
     return samplesDataType
 
 
+def plot_trace(trace):
+    plt.plot(trace)
+    plt.show()
+
+
+def write_to_npz(filename, traces, data):
+    print("Saving file")
+    output_file = filename
+    np.savez(output_file, traces=traces, data=data)
+
+
 if __name__ == '__main__':
     ts = trs.TraceSet()
-    filename = "../data/traces/SequenceAcquisition_SW_AES_ENC_3kx16"
+    filename = "../data/traces/raw_traces/SequenceAcquisition_SW_AES_ENC_3kx16"
     key = [b for b in b'\xca\xfe\xba\xbe\xde\xad\xbe\xef\x00\x01\x02\x03\x04\x05\x06\x07']
     ts.open(filename + ".trs")
     samplesDataType = determineTrsSampleCoding(ts)
@@ -41,20 +51,17 @@ if __name__ == '__main__':
         raw_ciphertexts[i, :] = np.array(t._data[data_space:], dtype="uint8")
         raw_key[i, :] = np.array(key[:data_space], dtype="uint8")
 
-    # print(raw_traces[0][0:20])
-    # print(raw_key[0])
     print("Preparing the traces for training")
     traces = LabelledTraces(byte_attacked=0, leakage=3, filename=None, raw_traces=raw_traces,
                             raw_plaintext=raw_plaintexts, raw_key=raw_key)
-    traces.prepare_traces_labels(0, 2000, 2000, 2500, 2500, 3000, 57750, 78670)
-
+    traces.prepare_traces_labels(0, 2000, 2000, 2500, 2500, 3000, 58000, 60960)
+    traces.write_to_file("../data/traces/round_3_traces.h5")
     print()
+    # plot_trace(raw_traces[0])
 
-    # print("Saving file")
-    # output_file = 'op_traces.npz'
-    # np.savez(output_file, traces=traces, data=data)
+    # traces1 = LabelledTraces(2,1, "../data/traces/raw_traces/ATMega8515_raw_traces.h5")
+    # plot_trace(traces1.raw_traces[0])
 
-    # plt.plot(t1)
-    # plt.show()
     # 3rd round traces
     # 57750 - 78670 - total of 19120 features
+    # 58000-60960

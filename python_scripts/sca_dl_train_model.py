@@ -3,11 +3,11 @@
 import sys
 import h5py
 import numpy as np
-import matplotlib.pyplot as plt
 import tensorflow as tf
-from tensorflow.keras import layers
 from tensorflow.keras.utils import to_categorical
 from tensorflow.python.client import device_lib
+
+from dl_model import define_model
 
 device_lib.list_local_devices()
 
@@ -35,49 +35,9 @@ def load_traces_from_file(filename: str) -> (np.array, np.array, np.array, np.ar
     return x_profiling, y_profiling, x_validation, y_validation
 
 
-def define_model() -> tf.keras.Model:
-    """
-    Architect and Config
-    """
-    model = tf.keras.Sequential(
-        [
-            # keras.Input(shape=(200,1,700)),
-            # 1st block of CNN
-            layers.Conv1D(64, 11, strides=1, padding="same", activation="relu", input_shape=(700, 1)),
-            layers.AveragePooling1D(pool_size=2, strides=2, padding="valid"),
-
-            # 2nd block
-            layers.Conv1D(128, 11, strides=1, padding="same", activation="relu"),
-            layers.AveragePooling1D(pool_size=2, strides=2, padding="valid"),
-
-            # 3rd block
-            layers.Conv1D(256, 11, strides=1, padding="same", activation="relu"),
-            layers.AveragePooling1D(pool_size=2, strides=2, padding="valid"),
-
-            # 4th block
-            layers.Conv1D(512, 11, strides=1, padding="same", activation="relu"),
-            layers.AveragePooling1D(pool_size=2, strides=2, padding="valid"),
-
-            # 5th block
-            layers.Conv1D(512, 11, strides=1, padding="same", activation="relu"),
-            layers.AveragePooling1D(pool_size=2, strides=2, padding="valid"),
-
-            # Flattening layer
-            layers.Flatten(),
-
-            # FC layer and output
-            layers.Dense(4096, activation='relu'),
-            layers.Dense(4096, activation='relu'),
-            layers.Dense(9, activation='softmax'),
-        ]
-    )
-
-    return model
-
-
 if __name__ == "__main__":
     (profiling_traces, profiling_labels,
-     validation_traces, validation_labels) = load_traces_from_file("../data/traces/ASCAD_stored_traces.h5")
+     validation_traces, validation_labels) = load_traces_from_file("../data/traces/round_3_traces.h5")
 
     tf.config.list_physical_devices('GPU')  # checking the availability of GPU
 
@@ -91,9 +51,9 @@ if __name__ == "__main__":
                   metrics=['accuracy'])
 
     # workers = 8
-    batch_size = 128
+    batch_size = 64
     num_classes = 9
-    epochs = 100
+    epochs = 50
 
     weights_file_name = sys.argv[1]
 
