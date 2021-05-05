@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+import configparser
 import sys
 import h5py
 import numpy as np
@@ -36,8 +36,15 @@ def load_traces_from_file(filename: str) -> (np.array, np.array, np.array, np.ar
 
 
 if __name__ == "__main__":
+    config = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation())  # Initializing configuration
+    config.read('config.ini')
+    training_config = config['Training']
+    in_file = config['TRS']['TracesStorageFile']
+
+    # in_file = "../data/traces/" + sys.argv[1]
+
     (profiling_traces, profiling_labels,
-     validation_traces, validation_labels) = load_traces_from_file("../data/traces/round_3_traces.h5")
+     validation_traces, validation_labels) = load_traces_from_file(in_file)
 
     tf.config.list_physical_devices('GPU')  # checking the availability of GPU
 
@@ -51,11 +58,10 @@ if __name__ == "__main__":
                   metrics=['accuracy'])
 
     # workers = 8
-    batch_size = 64
-    num_classes = 9
-    epochs = 50
-
-    weights_file_name = sys.argv[1]
+    batch_size = training_config.getint('BatchSize')
+    num_classes = training_config.getint('Classes')
+    epochs = training_config.getint('Epochs')
+    weights_file_name = training_config['WeightsFilename']
 
     model.fit(profiling_traces,
               to_categorical(profiling_labels, num_classes),

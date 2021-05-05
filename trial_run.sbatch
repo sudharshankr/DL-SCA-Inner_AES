@@ -4,9 +4,9 @@
 # job-array example #
 #####################
 
-#SBATCH --job-name=round_3_test
+#SBATCH --job-name=config_test
 #SBATCH --qos=short
-#SBATCH --time=0-01:30:00
+#SBATCH --time=0-00:10:00
 
 # this is a hard limit
 #SBATCH --ntasks=1
@@ -24,6 +24,6 @@ cd /home/nfs/sudharshankuma/
 source env/bin/activate
 cd python_scripts/
 #
-#srun python3 sca_dl_train_model.py cnn_hw_round_3.h5
-srun python3 test_model.py ../data/weights/cnn_hw_round_3.h5
+srun python3 sca_dl_train_model.py
+#srun python3 attack.py round_3_leakage_1.h5 cnn_round_3_leakage_1.h5
 exit 0

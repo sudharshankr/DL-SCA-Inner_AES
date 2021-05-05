@@ -12,7 +12,7 @@ def plot_graph(ranks, traces_counts):
     plt.show()
 
 
-npzfile = np.load("../data/weights/test_results.npz")
+npzfile = np.load("../data/attack_results/results_round_3_leakage_1.npz")
 ranks = npzfile["ranks"]
 trace_cnt = npzfile["trace_cnt"]
 

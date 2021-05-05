@@ -13,10 +13,12 @@ from funcs import galois_mult_np, calc_round_key_byte, hamming_lookup, v_hamming
 
 
 class LabelledTraces:
-    def __init__(self, byte_attacked, leakage, filename: str = None, raw_traces: np.array = None,
-                 raw_plaintext: np.array = None, raw_key: np.array = None):
+    def __init__(self, byte_attacked: int, leakage_round: int, hypothesis_round: int, filename: str = None,
+                 raw_traces: np.array = None, raw_plaintext: np.array = None, raw_key: np.array = None):
         self.target_byte = byte_attacked
-        self.leakage = leakage
+        self.hypothesis_round = hypothesis_round
+        self.leakage_round = leakage_round
+        self.hypothesis_type = "hw"
         if filename is not None:
             traces_file = h5py.File(filename, "r")
             self.raw_traces = traces_file['traces']
@@ -38,16 +40,22 @@ class LabelledTraces:
         self.poi = []
 
     # extend for different leakage models, currently implemented for hamming weight
-    def labelize(self, plaintexts, keys):
-        constant_byte = 0
-        if self.leakage == 1:
+    def labelize(self, plaintexts: np.array, keys:np.array) -> np.array:
+        """
+        Labels the traces according to the target byte hypothesis (target round leakage)
+        :param plaintexts: the plaintexts
+        :param keys: the keys
+        :return: the hypothesis for all the selected traces
+        """
+        if self.hypothesis_round == 1:
             return hamming_lookup[aes_sbox[plaintexts[:, self.target_byte] ^ keys[:, self.target_byte]]]
-        elif self.leakage == 3:
+        elif self.hypothesis_round == 3:
+            constant_byte = 0
             delta = constant_byte ^ calc_round_key_byte(1, 0, keys)
             gamma = constant_byte ^ calc_round_key_byte(2, 0, keys)
             m1 = m2 = 2
             # S(m1 * S(m2 * S(p0 ^ k0) xor delta) xor gamma)
-            leakage = hamming_lookup[aes_sbox[
+            hypothesis = hamming_lookup[aes_sbox[
                                          galois_mult_np(
                                              aes_sbox[
                                                  galois_mult_np(
@@ -56,11 +64,23 @@ class LabelledTraces:
                                                      m2)
                                                 ^ delta], m1)
                                          ^ gamma]]
-            return leakage
+            return hypothesis
 
     def prepare_traces_labels(self, profiling_start=0, profiling_end=50000, validation_start=50000,
                               validation_end=55000,
                               attack_start=55000, attack_end=60000, poi_start=45400, poi_end=46100):
+        """
+        Pre-processing of traces. Extract the required traces and label them from the raw traces.
+        All the indices are relative to the absolute traces.
+        :param profiling_start: Start index for profiling
+        :param profiling_end: End index for profiling
+        :param validation_start: Start index for validation
+        :param validation_end: End index for validation
+        :param attack_start: Start index for attack
+        :param attack_end: End index for attack
+        :param poi_start: Points of interest start
+        :param poi_end: Points of interest end
+        """
         self.profiling_index = [n for n in range(profiling_start, profiling_end)]
         self.validation_index = [n for n in range(validation_start, validation_end)]
         self.attack_index = [n for n in range(attack_start, attack_end)]
@@ -77,7 +97,14 @@ class LabelledTraces:
         self.attack_labels = self.labelize(self.raw_plaintext[self.attack_index], self.raw_key[self.attack_index])
 
     def write_to_file(self, filename):
-        out_file = h5py.File(filename, "w") # make output to h5 file
+        """
+        Write the processed traces - Profiling, Validation and Attack traces - to a file
+        Output file name - <leakage_round>-<hypothesis_round>-<hypothesis_type>.h5
+        example : leakage_rnd_3-hyp_rnd_1-hw.h5
+        """
+        # filename = "leakage_rnd_" + str(self.leakage_round)+"-hyp_rnd_" + \
+        #            str(self.hypothesis_round) + "-" + self.hypothesis_type + ".h5"
+        out_file = h5py.File(filename, "w")     # make output to h5 file
 
         profiling_traces_group = out_file.create_group("Profiling_traces")
         attack_traces_group = out_file.create_group("Attack_traces")
@@ -115,6 +142,8 @@ class LabelledTraces:
         out_file.flush()
         out_file.close()
 
+
+# some code to check if everything is working fine
 # if __name__ == "__main__":
 #     traces = LabelledTraces(2,1, "../data/traces/ATMega8515_raw_traces.h5")
 #     plt.plot(traces.raw_traces[0])
