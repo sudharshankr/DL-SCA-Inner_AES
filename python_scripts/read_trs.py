@@ -41,6 +41,15 @@ def write_metadata_to_file(filename, plaintexts, ciphertexts):
     np.savez(output_file, plaintext=plaintexts, ciphertext=ciphertexts)
 
 
+def allocate_random_keys(keys):
+    """
+    Generating random keys for sanity checks during training
+    @param keys: The portion of the keys you want as random
+    """
+    for i in range(keys.shape[0]):
+        keys[i] = np.random.randint(256, size=(16))
+
+
 if __name__ == '__main__':
     config = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation())    # Initializing configuration
     config.read('config.ini')
@@ -53,7 +62,7 @@ if __name__ == '__main__':
     # out_file = "../data/traces/" + sys.argv[1]  # add .h5 extension in the argument
     # key = [b for b in b'\xca\xfe\xba\xbe\xde\xad\xbe\xef\x00\x01\x02\x03\x04\x05\x06\x07']
 
-    key = [int(fixed_key[b:b+2],16) for b in range(0, len(fixed_key), 2)]
+    key = [int(fixed_key[b:b+2], 16) for b in range(0, len(fixed_key), 2)]
     ts = trs.TraceSet()
     ts.open(in_file + ".trs")
     samplesDataType = determineTrsSampleCoding(ts)
@@ -71,6 +80,7 @@ if __name__ == '__main__':
         raw_ciphertexts[i, :] = np.array(t._data[data_space:], dtype="uint8")
         raw_key[i, :] = np.array(key[:data_space], dtype="uint8")
 
+    # allocate_random_keys(raw_key[:2500])
     print("Preparing the traces for training")
     traces = LabelledTraces(byte_attacked=leakage_details.getint('TargetKeyByteIndex'),
                             leakage_round=leakage_details.getint('LeakageRound'),

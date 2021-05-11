@@ -2,12 +2,13 @@ import h5py
 import numpy as np
 import copy
 
-from funcs import galois_mult_np, calc_round_key_byte, hamming_lookup, v_hamming, aes_sbox
+from funcs import galois_mult, galois_mult_np, calc_round_key_byte, hamming_lookup, v_hamming, aes_sbox
 
 """## Generate Label for Traces
 
 ### Prepare ASCAD Code and Database
 """
+
 
 # download ASCAD Database : ATMEGA8515 Masking Fixed Key
 
@@ -40,7 +41,7 @@ class LabelledTraces:
         self.poi = []
 
     # extend for different leakage models, currently implemented for hamming weight
-    def labelize(self, plaintexts: np.array, keys:np.array) -> np.array:
+    def labelize(self, plaintexts: np.array, keys: np.array) -> np.array:
         """
         Labels the traces according to the target byte hypothesis (target round leakage)
         :param plaintexts: the plaintexts
@@ -51,19 +52,39 @@ class LabelledTraces:
             return hamming_lookup[aes_sbox[plaintexts[:, self.target_byte] ^ keys[:, self.target_byte]]]
         elif self.hypothesis_round == 3:
             constant_byte = 0
-            delta = constant_byte ^ calc_round_key_byte(1, 0, keys)
-            gamma = constant_byte ^ calc_round_key_byte(2, 0, keys)
+            delta = galois_mult_np(aes_sbox[constant_byte ^ keys[:, 5]], 3) \
+                    ^ galois_mult_np(aes_sbox[constant_byte ^ keys[:, 10]], 1) \
+                    ^ galois_mult_np(aes_sbox[constant_byte ^ keys[:, 15]], 1) ^ calc_round_key_byte(1, 0, keys)
+            # delta = constant_byte ^ calc_round_key_byte(1, 0, keys)
+            gamma_1 = galois_mult_np(aes_sbox[galois_mult_np(aes_sbox[constant_byte ^ keys[:, 4]], 1) \
+                                              ^ galois_mult_np(aes_sbox[constant_byte ^ keys[:, 9]], 2) \
+                                              ^ galois_mult_np(aes_sbox[constant_byte ^ keys[:, 14]], 3) \
+                                              ^ galois_mult_np(aes_sbox[constant_byte ^ keys[:, 3]],
+                                                            1) ^ calc_round_key_byte(1, 5, keys)], 3)
+
+            gamma_2 = galois_mult_np(aes_sbox[galois_mult_np(aes_sbox[constant_byte ^ keys[:, 8]], 1) \
+                                              ^ galois_mult_np(aes_sbox[constant_byte ^ keys[:, 13]], 1) \
+                                              ^ galois_mult_np(aes_sbox[constant_byte ^ keys[:, 2]], 2) \
+                                              ^ galois_mult_np(aes_sbox[constant_byte ^ keys[:, 7]],
+                                                            3) ^ calc_round_key_byte(1, 10, keys)], 1)
+
+            gamma_3 = galois_mult_np(aes_sbox[galois_mult_np(aes_sbox[constant_byte ^ keys[:, 12]], 3) \
+                                              ^ galois_mult_np(aes_sbox[constant_byte ^ keys[:, 1]], 1) \
+                                              ^ galois_mult_np(aes_sbox[constant_byte ^ keys[:, 6]], 1) \
+                                              ^ galois_mult_np(aes_sbox[constant_byte ^ keys[:, 11]],
+                                                            2) ^ calc_round_key_byte(1, 15, keys)], 1)
+            gamma = gamma_1 ^ gamma_2 ^ gamma_3 ^ calc_round_key_byte(2, 0, keys)
             m1 = m2 = 2
             # S(m1 * S(m2 * S(p0 ^ k0) xor delta) xor gamma)
             hypothesis = hamming_lookup[aes_sbox[
-                                         galois_mult_np(
-                                             aes_sbox[
-                                                 galois_mult_np(
-                                                     aes_sbox[
-                                                         plaintexts[:, self.target_byte] ^ keys[:, self.target_byte]],
-                                                     m2)
-                                                ^ delta], m1)
-                                         ^ gamma]]
+                galois_mult_np(
+                    aes_sbox[
+                        galois_mult_np(
+                            aes_sbox[
+                                plaintexts[:, self.target_byte] ^ keys[:, self.target_byte]],
+                            m2)
+                        ^ delta], m1)
+                ^ gamma]]
             return hypothesis
 
     def prepare_traces_labels(self, profiling_start=0, profiling_end=50000, validation_start=50000,
@@ -89,6 +110,9 @@ class LabelledTraces:
         self.profiling_traces = copy.deepcopy(self.raw_traces[profiling_start:profiling_end, poi_start:poi_end])
         self.validation_traces = copy.deepcopy(self.raw_traces[validation_start:validation_end, poi_start:poi_end])
         self.attack_traces = copy.deepcopy(self.raw_traces[attack_start:attack_end, poi_start:poi_end])
+        # use the following for sanity checks, and comment out their corresponding correct definitions above
+        # self.profiling_traces = copy.deepcopy(self.raw_traces[profiling_start:profiling_end, 50000:52960])
+        # self.attack_traces = copy.deepcopy(self.raw_traces[attack_start:attack_end, 50000:52960]) # for sanity checks
 
         self.profiling_labels = self.labelize(self.raw_plaintext[self.profiling_index],
                                               self.raw_key[self.profiling_index])
@@ -104,7 +128,7 @@ class LabelledTraces:
         """
         # filename = "leakage_rnd_" + str(self.leakage_round)+"-hyp_rnd_" + \
         #            str(self.hypothesis_round) + "-" + self.hypothesis_type + ".h5"
-        out_file = h5py.File(filename, "w")     # make output to h5 file
+        out_file = h5py.File(filename, "w")  # make output to h5 file
 
         profiling_traces_group = out_file.create_group("Profiling_traces")
         attack_traces_group = out_file.create_group("Attack_traces")
@@ -142,12 +166,11 @@ class LabelledTraces:
         out_file.flush()
         out_file.close()
 
-
 # some code to check if everything is working fine
 # if __name__ == "__main__":
 #     traces = LabelledTraces(2,1, "../data/traces/ATMega8515_raw_traces.h5")
 #     plt.plot(traces.raw_traces[0])
 #     plt.show()
-    # traces.prepare_traces_labels()
+# traces.prepare_traces_labels()
 #     # traces.write_to_file("../data/traces/ASCAD_stored_traces.h5")
 #     print(galois_mult(0, 2))

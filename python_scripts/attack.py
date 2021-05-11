@@ -9,7 +9,7 @@ from aeskeyschedule import key_schedule
 import time
 from tqdm import tqdm
 
-from funcs import write_to_npz, widgets, hamming_lookup, aes_sbox
+from funcs import write_to_npz, widgets, hamming_lookup, aes_sbox, calc_round_key_byte, galois_mult_np, galois_mult
 from leakage_models import calc_hypothesis_round_3
 from dl_model import define_model
 
@@ -156,12 +156,34 @@ if __name__ == "__main__":
         write_to_npz(results_filename, rank_progress, trace_count, key_probabilities)
 
     elif hypothesis == 3:
+        constant_byte = 0
         round_keys = key_schedule(attack_keys[0])
-        real_gamma = round_keys[2][0]
-        real_delta = round_keys[1][0]
+        real_delta = galois_mult(aes_sbox[constant_byte ^ attack_keys[0][5]], 3) \
+                    ^ galois_mult(aes_sbox[constant_byte ^ attack_keys[0][10]], 1) \
+                    ^ galois_mult(aes_sbox[constant_byte ^ attack_keys[0][15]], 1) ^ round_keys[1][0]
+
+        gamma_1 = galois_mult(aes_sbox[galois_mult(aes_sbox[constant_byte ^ attack_keys[0][4]], 1) \
+                                          ^ galois_mult(aes_sbox[constant_byte ^ attack_keys[0][9]], 2) \
+                                          ^ galois_mult(aes_sbox[constant_byte ^ attack_keys[0][14]], 3) \
+                                          ^ galois_mult(aes_sbox[constant_byte ^ attack_keys[0][3]],
+                                                        1) ^ round_keys[1][5]], 3)
+
+        gamma_2 = galois_mult(aes_sbox[galois_mult(aes_sbox[constant_byte ^ attack_keys[0][8]], 1) \
+                                          ^ galois_mult(aes_sbox[constant_byte ^ attack_keys[0][13]], 1) \
+                                          ^ galois_mult(aes_sbox[constant_byte ^ attack_keys[0][2]], 2) \
+                                          ^ galois_mult(aes_sbox[constant_byte ^ attack_keys[0][7]],
+                                                        3) ^ round_keys[1][10]], 1)
+
+        gamma_3 = galois_mult(aes_sbox[galois_mult(aes_sbox[constant_byte ^ attack_keys[0][12]], 3) \
+                                          ^ galois_mult(aes_sbox[constant_byte ^ attack_keys[0][1]], 1) \
+                                          ^ galois_mult(aes_sbox[constant_byte ^ attack_keys[0][6]], 1) \
+                                          ^ galois_mult(aes_sbox[constant_byte ^ attack_keys[0][11]],
+                                                        2) ^ round_keys[1][15]], 1)
+        real_gamma = gamma_1 ^ gamma_2 ^ gamma_3 ^ round_keys[2][0]
         (rank_progress, trace_count, key_probabilities) = run_attack_round_3(model, attack_traces, attack_plaintexts,
                                                                              real_key, real_gamma, real_delta,
                                                                              batch_size)
+
         plot_graph(rank_progress, trace_count, key_probabilities)  # plotting the rank progress across the attack traces
         write_to_npz(results_filename, rank_progress, trace_count, key_probabilities)
 
