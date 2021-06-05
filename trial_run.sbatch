@@ -4,15 +4,14 @@
 # job-array example #
 #####################
 
-#SBATCH --job-name=cnn_trial2
+#SBATCH --job-name=cpa_round_3
 #SBATCH --qos=short
 #SBATCH --time=0-01:00:00
 
 # this is a hard limit
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
-#SBATCH --gres=jobspernode:four:1
-#SBATCH --mem-per-cpu=1500MB
+#SBATCH --mem-per-cpu=3000MB
 #SBATCH --gres=gpu:1
 
 # you may not place bash commands before the last SBATCH directive
@@ -24,5 +23,7 @@ cd /home/nfs/sudharshankuma/
 source env/bin/activate
 cd python_scripts/
 #
-srun python3 sca_dl_train_model.py cnn_hw_2.h5
+srun python3 cpa_round_3_cp.py
+#srun python3 sca_dl_train_model.py
+#srun python3 attack.py round_3_leakage_1.h5 cnn_round_3_leakage_1.h5
 exit 0
