@@ -21,7 +21,7 @@ class LabelledTraces:
         self.leakage_round = leakage_round
         self.hypothesis_type = "hw"
         if filename is not None:
-            traces_file = h5py.File(filename, "r")
+            traces_file = h5py.File(filename, "r")  # loading traces from h5py file
             self.raw_traces = traces_file['traces']
             self.raw_plaintext = traces_file['metadata']['plaintext']
             self.raw_key = traces_file['metadata']['key']
@@ -111,7 +111,7 @@ class LabelledTraces:
         self.validation_traces = copy.deepcopy(self.raw_traces[validation_start:validation_end, poi_start:poi_end])
         self.attack_traces = copy.deepcopy(self.raw_traces[attack_start:attack_end, poi_start:poi_end])
         # use the following for sanity checks, and comment out their corresponding correct definitions above
-        # self.profiling_traces = copy.deepcopy(self.raw_traces[profiling_start:profiling_end, 50000:52960])
+        # self.profiling_traces = copy.deepcopy(self.raw_traces[profiling_start:profiling_end, 50000:52960]) # for sanity checks
         # self.attack_traces = copy.deepcopy(self.raw_traces[attack_start:attack_end, 50000:52960]) # for sanity checks
 
         self.profiling_labels = self.labelize(self.raw_plaintext[self.profiling_index],
