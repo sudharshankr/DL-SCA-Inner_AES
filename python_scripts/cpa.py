@@ -4,6 +4,7 @@ import sys
 import configparser
 import Trace as trs
 from funcs import hamming_lookup, aes_sbox
+from label_traces import LabelledTraces
 
 
 def determineTrsSampleCoding(ts):
@@ -65,7 +66,10 @@ if __name__ == '__main__':
         raw_plaintexts[i, :] = np.array(t._data[:data_space], dtype="uint8")
         raw_ciphertexts[i, :] = np.array(t._data[data_space:], dtype="uint8")
         raw_key[i, :] = np.array(key[:data_space], dtype="uint8")
-
+    # traces = LabelledTraces(0, 1, 1, "../data/traces/raw_traces/ASCAD.h5")
+    # raw_traces = traces.raw_traces
+    # raw_plaintexts = traces.raw_plaintext
+    # raw_key = traces.raw_key
     # plot_trace(raw_traces[0])
     # 16000 - 19930
     tt = raw_traces[:2000, 16000:19000]
@@ -78,7 +82,7 @@ if __name__ == '__main__':
     max_cpa = [0] * 256
     count_traces = []
     key_ranks = []
-    total_no_of_traces = 150
+    total_no_of_traces = 100
 
     for num_traces in range(10, total_no_of_traces, 10):
         print("Calculating for %d traces" % num_traces)

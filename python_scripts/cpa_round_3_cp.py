@@ -140,14 +140,6 @@ if __name__ == '__main__':
         for trace_id in range(num_traces):
             hyp[trace_id, :] = calc_hypothesis_round_3(raw_plaintexts[trace_id, 0], guesses_range)
         print("Done calculating the hypothoses...")
-        # sum_num = np.zeros(num_point)
-        # sum_den_1 = np.zeros(num_point)
-        # sum_den_2 = np.zeros(num_point)
-        # hypothesis based on round 1. (might have to change this)
-        # hyp = hamming_lookup[aes_sbox[raw_plaintexts[:num_traces, 0] ^ guess_idx]]
-        # hyp = np.zeros(num_traces)
-        # for t_num in range(num_traces):
-        #     hyp[t_num] = HW[intermediate(plaintext[t_num][byte_idx], guess_idx)]
 
         h_mean = cp.mean(hyp, axis=0, dtype=cp.float64)  # Mean of hypothesis
         t_mean = cp.mean(tt[:num_traces, :], axis=0, dtype=cp.float64)  # Mean of all points in trace
@@ -173,21 +165,10 @@ if __name__ == '__main__':
             #     sum_den_2 += t_diff ** 2
             # cpa_output = sum_num / np.sqrt(sum_den_1 * sum_den_2)
             max_cpa[guess_idx] = max(abs(cpa_output))
-        # print("Sub-key = %2d, hyp = %02x" % (b_num, k_guess))
-
-        # Initialize arrays and variables to zero
-
-        # print()
-        # plt.plot(max_cpa)
-        # plt.show()
         cpa_refs = cp.argsort(max_cpa)[::-1]
-        # print(cpa_refs)
-        # Find Guess Entropy (GE)
-        # kr = list(cpa_refs).index(known_key)
         key_ranks.append(cp.where(cpa_refs == real_idx)[0])
         count_traces.append(num_traces)
 
     # print("The key rank: ",kr)
     print("The guess is: ", cp.argsort(max_cpa)[-1])
     write_to_cpz("cupy_output", ranks=key_ranks, trace_cnt=count_traces, key_probs=cpa_refs)
-    # plot_graph(key_ranks, count_traces)

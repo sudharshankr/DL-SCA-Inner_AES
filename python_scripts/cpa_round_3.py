@@ -42,11 +42,6 @@ def determineTrsSampleCoding(ts):
     return samplesDataType
 
 
-def plot_trace(trace):
-    plt.plot(trace)
-    plt.show()
-
-
 def plot_graph(ranks, traces_counts, key_probs=None):
     plt.figure(figsize=(15, 6))
     plt.title('Rank vs Traces Number')
@@ -77,41 +72,35 @@ def return_correlations(guess_idx):
     # return max(abs(cpa_output))
 
 
-if __name__ == '__main__':
-    start_time = 0
-    # config = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation())  # Initializing configuration
-    # config.read('config.ini')
-    # trs_file_details = config['TRS']
-    # in_file = trs_file_details['InputFilename']
-    # fixed_key = trs_file_details['key']
-    # key = [int(fixed_key[b:b + 2], 16) for b in range(0, len(fixed_key), 2)]
-    #
-    # ts = trs.TraceSet()
-    # ts.open(in_file + ".trs")
-    # samplesDataType = determineTrsSampleCoding(ts)
-    # print("Preallocating arrays")
-    # data_space = int(ts._dataSpace / 2)
-    # raw_traces = np.empty(shape=(ts._numberOfTraces, ts._numberOfSamplesPerTrace), dtype=samplesDataType)
-    # raw_plaintexts = np.empty(shape=(ts._numberOfTraces, data_space), dtype="uint8")
-    # raw_ciphertexts = np.empty(shape=(ts._numberOfTraces, data_space), dtype="uint8")
-    # raw_key = np.empty(shape=(ts._numberOfTraces, data_space), dtype="uint8")
-    # print("Populating arrays")
-    # for i in range(ts._numberOfTraces):
-    #     t = ts.getTrace(i)
-    #     raw_traces[i, :] = np.array(t._samples, dtype=samplesDataType)
-    #     raw_plaintexts[i, :] = np.array(t._data[:data_space], dtype="uint8")
-    #     raw_ciphertexts[i, :] = np.array(t._data[data_space:], dtype="uint8")
-    #     raw_key[i, :] = np.array(key[:data_space], dtype="uint8")
+# Even faster correlation trace computation
+# Takes the full matrix of predictions instead of just a column
+# O - (n,t) array of n traces with t samples each
+# P - (n,m) array of n predictions for each of the m candidates
+# returns an (m,t) correaltion matrix of m traces t samples each
+def correlationTraces(O, P):
+    (n, t) = O.shape  # n traces of t samples
+    (n_bis, m) = P.shape  # n predictions for each of m candidates
 
-    # np.savez("trs_file_traces.npz", raw_traces=raw_traces[:2000, 58000:60960], raw_plaintexts=raw_plaintexts[:2000], raw_key=raw_key[:2000])
-    npzfile = np.load("trs_file_traces.npz")
+    DO = O - (np.einsum("nt->t", O, dtype='float64', optimize='optimal') / np.double(n))  # compute O - mean(O)
+    DP = P - (np.einsum("nm->m", P, dtype='float64', optimize='optimal') / np.double(n))  # compute P - mean(P)
+
+    numerator = np.einsum("nm,nt->mt", DP, DO, optimize='optimal')
+    tmp1 = np.einsum("nm,nm->m", DP, DP, optimize='optimal')
+    tmp2 = np.einsum("nt,nt->t", DO, DO, optimize='optimal')
+    tmp = np.einsum("m,t->mt", tmp1, tmp2, optimize='optimal')
+    denominator = np.sqrt(tmp)
+
+    return numerator / denominator
+
+
+if __name__ == '__main__':
+
+    npzfile = np.load("filtered_aligned_traces_58400-59100.npz")
     raw_traces = npzfile["raw_traces"]
     raw_plaintexts = npzfile["raw_plaintexts"]
     raw_key = npzfile["raw_key"]
-    # plot_trace(raw_traces[0])
     # 16000 - 19930
-    tt = raw_traces # [:2000, 58000:60960]
-    # r = np.corrcoef(hyp, raw_traces[:, 58000:60960])
+    tt = raw_traces  # [:2000, 58000:60960]
     known_key = raw_key[0][0]
     round_keys = key_schedule(raw_key[0])
     print("the real key ", known_key)
@@ -146,87 +135,46 @@ if __name__ == '__main__':
     real_idx = return_idx(known_key, real_delta, real_gamma)
     print("Initiating Guesses Range")
     key_guesses = np.array([n for n in range(256 * 256 * 256)])
-    guesses_range = np.zeros((key_guesses.shape[0], 3))
-    for i in range(key_guesses.shape[0]):
-        f = '{0:024b}'.format(key_guesses[i])
-        guesses_range[i][0] = int(f[:8], 2)
-        guesses_range[i][1] = int(f[8:16], 2)
-        guesses_range[i][2] = int(f[16:24], 2)
-    guesses_range = guesses_range.astype("uint8")
+    # guesses_range = np.zeros((key_guesses.shape[0], 3))
+    # for i in range(key_guesses.shape[0]):
+    #     f = '{0:024b}'.format(key_guesses[i])
+    #     guesses_range[i][0] = int(f[:8], 2)
+    #     guesses_range[i][1] = int(f[8:16], 2)
+    #     guesses_range[i][2] = int(f[16:24], 2)
+    # guesses_range = guesses_range.astype("uint8")
+    # np.save("Guesses_range.npy", guesses_range)
+    guesses_range = np.load("Guesses_range.npy")
     # cpa_output = [0] * guesses_range.shape[0]
     max_cpa = [0] * guesses_range.shape[0]
-    # jobs = []
-    for num_traces in range(25, 30, 10):
+    it_start = 0
+    hyp = np.zeros((180, guesses_range.shape[0]))
+    start_time = time.time()
+    for num_traces in range(30, 190, 10):
+        test_traces = tt[:num_traces, :]
         print("Calculating for %d traces" % num_traces)
-        hyp = np.zeros((num_traces, guesses_range.shape[0]))
-        for trace_id in range(num_traces):
+        for trace_id in range(it_start, num_traces):
             hyp[trace_id, :] = calc_hypothesis_round_3(raw_plaintexts[trace_id, 0], guesses_range)
         print("Done calculating the hypothoses...")
-        # sum_num = np.zeros(num_point)
-        # sum_den_1 = np.zeros(num_point)
-        # sum_den_2 = np.zeros(num_point)
-        # hypothesis based on round 1. (might have to change this)
-        # hyp = hamming_lookup[aes_sbox[raw_plaintexts[:num_traces, 0] ^ guess_idx]]
-        # hyp = np.zeros(num_traces)
-        # for t_num in range(num_traces):
-        #     hyp[t_num] = HW[intermediate(plaintext[t_num][byte_idx], guess_idx)]
-
-        h_mean = np.mean(hyp, axis=0, dtype=np.float64)  # Mean of hypothesis
-        t_mean = np.mean(tt[:num_traces, :], axis=0, dtype=np.float64)  # Mean of all points in trace
-        h_diff = hyp - h_mean
-        t_diff = tt[:num_traces, :] - t_mean
-        h_diff_ss = (h_diff * h_diff).sum(axis=0)
-        t_diff_ss = (t_diff * t_diff).sum(axis=0)
-        # For each trace, do the following
         print("Starting with the Guesses...")
-        # pbar = tqdm(total=len(key_guesses))
-        # pool = ThreadPool(200)
-        # max_cpa = pool.map(return_correlations, key_guesses)
-        # pool.close()
-        # pool.join()
-        # pbar.close()
-        nprocesses = 1000
-        start_time = time.time()
-        for guess_idx in range(0, guesses_range.shape[0], nprocesses):
-            print("Guess no.: %d and %2f" % (guess_idx, guess_idx / len(key_guesses)), end='\r', flush=True)
-            pool = multiprocessing.Pool(nprocesses)
-            pool.map(return_correlations, [kg for kg in range(guess_idx, guess_idx+nprocesses)])
-            pool.close()
-            #
-            # p = multiprocessing.Process(target=return_correlations, args=(guess_idx,))
-            # jobs.append(p)
-            # p.start()
-        #     # result = np.matmul(h_diff.transpose(), t_diff) / np.sqrt(np.outer(h_diff_ss, t_diff_ss))
-        #     # bound the values to -1 to 1 in the event of precision issues
-        #     # cpa_output = np.maximum(np.minimum(result, 1.0), -1.0)
-        #     # for t_num in range(num_traces):
-        #     #     h_diff = (hyp[t_num, guess_idx] - h_mean[guess_idx])
-        #     #
-        #     #     sum_num += h_diff * t_diff
-        #     #     sum_den_1 += h_diff ** 2
-        #     #     sum_den_2 += t_diff ** 2
-        #     # cpa_output = sum_num / np.sqrt(sum_den_1 * sum_den_2)
-        # for proc in jobs:
-        #     proc.join()
-
-        # pbar.close()
-        # print("Sub-key = %2d, hyp = %02x" % (b_num, k_guess))
-
-        # Initialize arrays and variables to zero
-
-        # print()
-        # plt.plot(max_cpa)
-        # plt.show()
+        max_cpa = np.zeros((1, 1))
+        batch_step = int(len(key_guesses) / 256)
+        for batch_id in tqdm(range(0, len(key_guesses), batch_step)):
+            hyp_temp = hyp[:num_traces, batch_id:batch_id + batch_step]
+            # hyp_temp = hyp_temp.reshape((hyp.shape[0],1))
+            max_cpa = np.concatenate(
+                (max_cpa, np.amax(np.abs(correlationTraces(test_traces, hyp_temp)), axis=1).reshape(batch_step, 1)), axis=0)
+            # max_cpa = np.concatenate((max_cpa, max_cpa_temp), axis=0)
+        max_cpa = max_cpa[1:, 0]
         cpa_refs = np.argsort(max_cpa)[::-1]
-        # print(cpa_refs)
-        # Find Guess Entropy (GE)
-        # kr = list(cpa_refs).index(known_key)
         key_ranks.append(np.where(cpa_refs == real_idx)[0])
         count_traces.append(num_traces)
+        it_start = num_traces
 
-    # print("The key rank: ",kr)
-    print(time.time() - start_time)
-    print(len(max_cpa))
-    print("The guess is: ", np.argsort(max_cpa)[-1])
-    # write_to_cpz("cupy_output", ranks=key_ranks, trace_cnt=count_traces, key_probs=cpa_refs)
-    # plot_graph(key_ranks, count_traces)
+    time_taken = time.time() - start_time
+    print("Total time taken:%.2f seconds, %.2f minutes" % (time_taken, time_taken/60))
+    # print(len(max_cpa))
+    #[array([2918433]), array([722637]), array([93251]), array([157522]), array([21131]), array([3975]), array([1045]),
+     #array([591]), array([220]), array([36]), array([14]), array([22]), array([5]), array([1]), array([0]), array([0])]
+    plot_graph(key_ranks, count_traces)
+    print("The guess is: ", int('{0:024b}'.format(np.argsort(max_cpa)[::-1][0])[:8], 2))
+    # int('{0:024b}'.format(key_probs.argsort()[-1])[:8], 2)
