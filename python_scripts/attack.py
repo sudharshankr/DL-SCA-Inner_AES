@@ -10,7 +10,7 @@ import time
 from tqdm import tqdm
 
 from funcs import write_to_npz, widgets, hamming_lookup, aes_sbox, calc_round_key_byte, galois_mult_np, galois_mult
-from leakage_models import calc_hypothesis_round_3
+from leakage_models import *
 from dl_model import define_model
 
 
@@ -45,6 +45,16 @@ def load_attack_traces(filename: str, num_traces_test: int) -> (np.array, np.arr
 def run_attack_round_1(model: tf.keras.Model, attack_traces: np.array,
                        attack_plaintexts: np.array, real_key: int, byte_attacked: int, batch_size: int) -> (
 list, list, np.array):
+    """
+    Attack model for the first round of AES
+    @param model:  Model to be tested, this model should have weights already loaded
+    @param attack_traces: traces to run the attack on
+    @param attack_plaintexts: Plaintexts corresponding to the attack traces
+    @param real_key: the real key byte to be guessed
+    @param byte_attacked: the index of the byte being attacked
+    @param batch_size: the batch size required for the attack using the DL model
+    @return: Key ranks, Count of traces and the probabilities of each key guess
+    """
     P_k = np.zeros(256)
     traces_num = []
     rank_traces = []
@@ -70,7 +80,7 @@ def run_attack_round_3(model: tf.keras.Model, attack_traces: np.array,
                        batch_size: int) -> (
         list, list, np.array):
     """
-    Testing the model with the attack traces
+    Testing the model with the attack traces for round 3
     :param model: Model to be tested, this model should have weights already loaded
     :param attack_traces: The attack traces to be tested
     :param attack_plaintexts: The plaintext of corresponding attack traces
@@ -84,19 +94,24 @@ def run_attack_round_3(model: tf.keras.Model, attack_traces: np.array,
     count = 0
     real_idx = return_idx(real_key, real_delta, real_gamma)
     key_guesses = np.array([n for n in range(256 * 256 * 256)])
-    guesses_range = np.zeros((key_guesses.shape[0], 3))
-    for i in range(key_guesses.shape[0]):
-        f = '{0:024b}'.format(key_guesses[i])
-        guesses_range[i][0] = int(f[:8], 2)
-        guesses_range[i][1] = int(f[8:16], 2)
-        guesses_range[i][2] = int(f[16:24], 2)
-    guesses_range = guesses_range.astype("uint8")
+    # guesses_range = np.zeros((key_guesses.shape[0], 3))
+    # for i in range(key_guesses.shape[0]):
+    #     f = '{0:024b}'.format(key_guesses[i])
+    #     guesses_range[i][0] = int(f[:8], 2)
+    #     guesses_range[i][1] = int(f[8:16], 2)
+    #     guesses_range[i][2] = int(f[16:24], 2)
+    # guesses_range = guesses_range.astype("uint8")
+    guesses_range = np.load("Guesses_range.npy")
     print("Created guesses list, now bruteforcing. Stand-by and better get some coffee...")
 
     for traces in tqdm(range(0, attack_traces.shape[0], batch_size), position=0, leave=True):
         start_time = time.time()
         predictions = model.predict(attack_traces[count:count + batch_size])
         plaintexts = attack_plaintexts[count:count + batch_size, byte_attacked]
+        start_time = time.time()
+        # TODO: make this faster using a batch computation strategy. Start with the below line
+        # hw = calc_hypothesis_round_3_batch(plaintexts, guesses_range, batch_size)
+        print(time.time() - start_time)
         for j in tqdm(range(len(predictions)), position=0, leave=True):
             hw = calc_hypothesis_round_3(plaintexts[j], guesses_range)
             P_k += predictions[j][hw]
@@ -104,8 +119,9 @@ def run_attack_round_3(model: tf.keras.Model, attack_traces: np.array,
             rank_traces.append(np.where(P_k.argsort()[::-1] == real_idx)[0])
             traces_num.append(j + count)
         loop_time = time.time() - start_time
-        print("the loop time for 1 batch of 64 traces: ", loop_time)
+        print("the loop time for 1 batch of 64 traces: ", loop_time/60)
         count += batch_size
+
 
     return rank_traces, traces_num, P_k
 
