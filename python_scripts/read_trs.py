@@ -50,6 +50,14 @@ def allocate_random_keys(keys):
         keys[i] = np.random.randint(256, size=(16))
 
 
+def rearrange_traces(raw_traces, raw_plaintexts, raw_ciphertexts, raw_key):
+    temp_traces = np.concatenate((raw_traces[1::2], raw_traces[::2]), axis=0)
+    temp_plaintexts = np.concatenate((raw_plaintexts[1::2], raw_plaintexts[::2]), axis=0)
+    temp_ciphertexts = np.concatenate((raw_ciphertexts[1::2], raw_ciphertexts[::2]), axis=0)
+    temp_key = np.concatenate((raw_key[1::2], raw_key[::2]), axis=0)
+    return temp_traces, temp_plaintexts, temp_ciphertexts, temp_key
+
+
 if __name__ == '__main__':
     config = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation())    # Initializing configuration
     config.read('config.ini')
@@ -81,7 +89,12 @@ if __name__ == '__main__':
         raw_key[i, :] = np.array(key[:data_space], dtype="uint8")
 
     # allocate_random_keys(raw_key[:2500])
-    print("Preparing the traces for training")
+    # round 3 - 58000 - 60960
+    # round 4 - 77500 - 80000
+    print("Reshuffling traces...")
+    (raw_traces, raw_plaintexts, raw_ciphertexts, raw_key) = rearrange_traces(raw_traces, raw_plaintexts, raw_ciphertexts, raw_key) # rearrange to attain the right indexes for profiling and attack
+
+    print("Preparing the traces for training...")
     traces = LabelledTraces(byte_attacked=leakage_details.getint('TargetKeyByteIndex'),
                             leakage_round=leakage_details.getint('LeakageRound'),
                             hypothesis_round=leakage_details.getint('HypothesisRound'),
@@ -95,7 +108,7 @@ if __name__ == '__main__':
 
     traces.write_to_file(trs_file_details['TracesStorageFile'])
     # write_metadata_to_file("../data/traces/metadata_output.npz", raw_plaintexts, raw_ciphertexts)
-    print()
+    print("Labelled traces written to file %s. Ready to train!" % trs_file_details['TracesStorageFile'])
     # plot_trace(raw_traces[0])
 
     # traces1 = LabelledTraces(2,1, "../data/traces/raw_traces/ATMega8515_raw_traces.h5")

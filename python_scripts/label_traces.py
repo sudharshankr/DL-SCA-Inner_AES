@@ -3,6 +3,7 @@ import numpy as np
 import copy
 
 from funcs import galois_mult, galois_mult_np, calc_round_key_byte, hamming_lookup, v_hamming, aes_sbox
+from calc_constants import calc_delta, calc_gamma, calc_theta
 
 """## Generate Label for Traces
 
@@ -85,6 +86,25 @@ class LabelledTraces:
                             m2)
                         ^ delta], m1)
                 ^ gamma]]
+            return hypothesis
+
+        elif self.hypothesis_round == 4:
+            m1 = m2 = m3 = 2
+            # gamma = delta = theta = 0
+            gamma = calc_gamma(plaintexts, keys)
+            delta = calc_delta(plaintexts, keys)
+            theta = calc_theta(plaintexts, keys)
+            hypothesis = hamming_lookup[aes_sbox[galois_mult_np(
+                aes_sbox[
+                    galois_mult_np(
+                        aes_sbox[
+                            galois_mult_np(
+                                aes_sbox[
+                                    plaintexts[:, self.target_byte] ^ keys[:, self.target_byte]],
+                                m2)
+                            ^ delta], m1)
+                    ^ gamma], m3)
+                ^ theta]]
             return hypothesis
 
     def prepare_traces_labels(self, profiling_start=0, profiling_end=50000, validation_start=50000,
