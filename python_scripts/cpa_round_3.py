@@ -143,7 +143,7 @@ if __name__ == '__main__':
     #     guesses_range[i][2] = int(f[16:24], 2)
     # guesses_range = guesses_range.astype("uint8")
     # np.save("Guesses_range.npy", guesses_range)
-    guesses_range = np.load("Guesses_range.npy")
+    guesses_range = np.load("Guesses_range_24.npy")
     # cpa_output = [0] * guesses_range.shape[0]
     max_cpa = [0] * guesses_range.shape[0]
     it_start = 0
