@@ -21,7 +21,7 @@ module list
 #
 cd /home/nfs/sudharshankuma/
 source env/bin/activate
-cd python_scripts/
+cd python_scripts_aes/
 #
 srun python3 sca_dl_train_model.py
 exit 0
