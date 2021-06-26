@@ -45,5 +45,10 @@ if __name__ == '__main__':
 
     plt.plot(raw_traces[0])
     plt.show()
-
-    np.savez("filtered_aligned_traces_58400-59100.npz", raw_traces=raw_traces[:2000, 58400:59100], raw_plaintexts=raw_plaintexts[:2000], raw_key=raw_key[:2000])
+    #77500 - 80000
+    profiling_traces = raw_traces[1::2, 77500:80000]
+    profiling_plaintexts = raw_plaintexts[1::2]
+    profiling_key = raw_key[1::2]
+    attack_traces = raw_traces[0::2, 77500:80000]
+    attack_plaintexts = raw_plaintexts[0::2]
+    np.savez("rnd4-traces_77500-80000.npz", raw_traces=raw_traces[:2000, 58400:59100], raw_plaintexts=raw_plaintexts[:2000], raw_key=raw_key[:2000])

@@ -2,7 +2,7 @@ import tensorflow as tf
 from tensorflow.keras import layers
 
 
-def define_model() -> tf.keras.Model:
+def define_model(poi_count) -> tf.keras.Model:
     """
     Architect and Config
     """
@@ -11,7 +11,7 @@ def define_model() -> tf.keras.Model:
             # keras.Input(shape=(2960, 1)),
             # Dense block to reduce the features
             # 1st block of CNN
-            layers.Conv1D(64, 11, strides=1, padding="same", activation="relu", input_shape=(2960, 1)),
+            layers.Conv1D(64, 11, strides=1, padding="same", activation="relu", input_shape=(poi_count, 1)),
             layers.AveragePooling1D(pool_size=2, strides=2, padding="valid"),
 
             # 2nd block

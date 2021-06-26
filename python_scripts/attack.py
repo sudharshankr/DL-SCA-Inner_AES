@@ -12,10 +12,15 @@ from tqdm import tqdm
 from funcs import write_to_npz, widgets, hamming_lookup, aes_sbox, calc_round_key_byte, galois_mult_np, galois_mult
 from leakage_models import *
 from dl_model import define_model
+from calc_constants import calc_gamma, calc_delta, calc_theta
 
 
-def return_idx(key, d, g):
+def return_idx_24(key, d, g):
     return int('{0:08b}'.format(key) + '{0:08b}'.format(d) + '{0:08b}'.format(g), 2)
+
+
+def return_idx_32(key, d, g, t):
+    return int('{0:08b}'.format(key) + '{0:08b}'.format(d) + '{0:08b}'.format(g) + '{0:08b}'.format(t), 2)
 
 
 def load_attack_traces(filename: str, num_traces_test: int) -> (np.array, np.array, np.array):
@@ -77,8 +82,7 @@ list, list, np.array):
 
 def run_attack_round_3(model: tf.keras.Model, attack_traces: np.array,
                        attack_plaintexts: np.array, real_key: int, real_gamma: int, real_delta: int,
-                       batch_size: int) -> (
-        list, list, np.array):
+                       batch_size: int) -> (list, list, np.array):
     """
     Testing the model with the attack traces for round 3
     :param model: Model to be tested, this model should have weights already loaded
@@ -92,7 +96,7 @@ def run_attack_round_3(model: tf.keras.Model, attack_traces: np.array,
     traces_num = []
     rank_traces = []
     count = 0
-    real_idx = return_idx(real_key, real_delta, real_gamma)
+    real_idx = return_idx_24(real_key, real_delta, real_gamma)
     key_guesses = np.array([n for n in range(256 * 256 * 256)])
     # guesses_range = np.zeros((key_guesses.shape[0], 3))
     # for i in range(key_guesses.shape[0]):
@@ -101,7 +105,7 @@ def run_attack_round_3(model: tf.keras.Model, attack_traces: np.array,
     #     guesses_range[i][1] = int(f[8:16], 2)
     #     guesses_range[i][2] = int(f[16:24], 2)
     # guesses_range = guesses_range.astype("uint8")
-    guesses_range = np.load("Guesses_range.npy")
+    guesses_range = np.load("Guesses_range_24.npy")
     print("Created guesses list, now bruteforcing. Stand-by and better get some coffee...")
 
     for traces in tqdm(range(0, attack_traces.shape[0], batch_size), position=0, leave=True):
@@ -122,8 +126,59 @@ def run_attack_round_3(model: tf.keras.Model, attack_traces: np.array,
         print("the loop time for 1 batch of 64 traces: ", loop_time/60)
         count += batch_size
 
+    return rank_traces, traces_num, P_k
+
+
+def run_attack_round_4(model: tf.keras.Model, attack_traces: np.array,
+                       attack_plaintexts: np.array, real_key: int, real_gamma: int, real_delta: int, real_theta: int,
+                       batch_size: int) -> (list, list, np.array):
+    """
+    Testing the model with the attack traces for round 4
+    :param model: Model to be tested, this model should have weights already loaded
+    :param attack_traces: The attack traces to be tested
+    :param attack_plaintexts: The plaintext of corresponding attack traces
+    :param real_key: The real key byte
+    :return: The trend in the rank of the real key byte with increasing traces, a count of the traces,
+            and the final list of key probabilities
+    """
+    P_k = np.zeros(256 * 256 * 256)
+    traces_num = []
+    rank_traces = []
+    count = 0
+    real_idx = return_idx_24(real_key, real_delta, real_gamma)
+    # key_guesses = np.array([n for n in range(256 * 256 * 256 * 256)])
+    # guesses_range = np.zeros((key_guesses.shape[0], 4))
+    # print("Preparing guesses...")
+    # for i in range(key_guesses.shape[0]):
+    #     f = '{0:032b}'.format(key_guesses[i])
+    #     guesses_range[i][0] = int(f[:8], 2)
+    #     guesses_range[i][1] = int(f[8:16], 2)
+    #     guesses_range[i][2] = int(f[16:24], 2)
+    #     guesses_range[i][3] = int(f[24:32], 2)
+    # guesses_range = guesses_range.astype("uint8")
+    # np.save("Guesses_range_32.npy", guesses_range)
+    guesses_range = np.load("Guesses_range_24.npy")
+    print("Created guesses list, now bruteforcing. Stand-by and better get some coffee...")
+    for traces in tqdm(range(0, attack_traces.shape[0], batch_size), position=0, leave=True):
+        start_time = time.time()
+        predictions = model.predict(attack_traces[count:count + batch_size])
+        plaintexts = attack_plaintexts[count:count + batch_size, byte_attacked]
+        start_time = time.time()
+        # TODO: make this faster using a batch computation strategy. Start with the below line
+        # hw = calc_hypothesis_round_3_batch(plaintexts, guesses_range, batch_size)
+        # print(time.time() - start_time)
+        for j in tqdm(range(len(predictions)), position=0, leave=True):
+            hw = calc_hypothesis_round_4(plaintexts[j], guesses_range, real_theta)
+            P_k += predictions[j][hw]
+            # rank_traces.append(int('{0:024b}'.format(int(np.where(P_k.argsort()[::-1] == real_idx)[0]))[:8], 2))
+            rank_traces.append(np.where(P_k.argsort()[::-1] == real_idx)[0])
+            traces_num.append(j + count)
+        loop_time = time.time() - start_time
+        print("the loop time for 1 batch of 64 traces: ", loop_time/60)
+        count += batch_size
 
     return rank_traces, traces_num, P_k
+
 
 
 def plot_graph(ranks, traces_counts, key_probs):
@@ -159,9 +214,10 @@ if __name__ == "__main__":
                        + "-hypothesis_rnd_" + str(hypothesis) + "-" + hyp_type + "-" + str(byte_attacked) + ".npz"
 
     # Starting attack
-    model = define_model()
-    model.load_weights(weights_filename)  # loading the weights into the model
     (attack_traces, attack_plaintexts, attack_keys) = load_attack_traces(traces_filename, 500)  # loading attack traces
+    model = define_model(attack_traces.shape[1])
+    model.load_weights(weights_filename)  # loading the weights into the model
+    # (attack_traces, attack_plaintexts, attack_keys) = load_attack_traces(traces_filename, 500)  # loading attack traces
     real_key = attack_keys[0][byte_attacked]  # for fixed keys
     print("real key byte", real_key)
 
@@ -203,4 +259,17 @@ if __name__ == "__main__":
         plot_graph(rank_progress, trace_count, key_probabilities)  # plotting the rank progress across the attack traces
         write_to_npz(results_filename, rank_progress, trace_count, key_probabilities)
 
+    elif hypothesis == 4:
+        real_delta = calc_delta(attack_plaintexts, attack_keys)
+        real_gamma = calc_gamma(attack_plaintexts, attack_keys)
+        real_theta = calc_theta(attack_plaintexts, attack_keys)
+        real_delta = real_delta[0]
+        real_gamma = real_gamma[0]
+        real_theta = real_theta[0]
+        (rank_progress, trace_count, key_probabilities) = run_attack_round_4(model, attack_traces, attack_plaintexts,
+                                                                             real_key, real_gamma, real_delta, real_theta,
+                                                                             batch_size)
+
+        plot_graph(rank_progress, trace_count, key_probabilities)  # plotting the rank progress across the attack traces
+        write_to_npz(results_filename, rank_progress, trace_count, key_probabilities)
     print()

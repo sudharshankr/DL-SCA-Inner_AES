@@ -12,18 +12,15 @@ def plot_graph(ranks, traces_counts):
     plt.show()
 #
 #
-# npzfile = np.load("../data/attack_results/results_round_3_leakage_1.npz")
-# ranks = npzfile["ranks"]
-# trace_cnt = npzfile["trace_cnt"]
-#
-# plot_graph(ranks, trace_cnt)
+npzfile = np.load("../data/attack_results/results-leakage_rnd_4-hypothesis_rnd_4-hw-0.npz")
+ranks = npzfile["ranks"]
+trace_cnt = npzfile["trace_cnt"]
+
+plot_graph(ranks, trace_cnt)
 
 # np1 = np.load("validation_file.npy")
 # np2 = np.load("validation_file_1.npy")
-ranks = [45, 37, 47, 42, 18, 15]
-traces = [i for i in range(10,100,5)]
-l = len(traces) - len(ranks)
-for j in range(l):
-    ranks.append(0)
-plot_graph(ranks, traces)
+# ranks = [45, 37, 47, 42, 18, 15]
+# traces = [i for i in range(10,100,5)]
+# l = len(traces) - len(ranks)
 print()

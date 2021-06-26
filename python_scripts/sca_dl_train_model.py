@@ -48,7 +48,7 @@ if __name__ == "__main__":
 
     tf.config.list_physical_devices('GPU')  # checking the availability of GPU
 
-    model = define_model()
+    model = define_model(profiling_traces.shape[1])
     model.summary()  # print the summary of the model
 
     optimizer = tf.keras.optimizers.RMSprop(lr=0.00001)
