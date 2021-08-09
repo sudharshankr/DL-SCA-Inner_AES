@@ -6,12 +6,12 @@
 
 #SBATCH --job-name=dl_round_4
 #SBATCH --qos=short
-#SBATCH --time=0-00:10:00
+#SBATCH --time=0-00:20:00
 
 # this is a hard limit
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=1
-#SBATCH --mem-per-cpu=2500MB
+#SBATCH --mem-per-cpu=3000MB
 #SBATCH --gres=gpu:1
 
 # you may not place bash commands before the last SBATCH directive

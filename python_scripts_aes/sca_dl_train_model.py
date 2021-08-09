@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import configparser
+import json
 import sys
 import h5py
 import numpy as np
@@ -7,7 +8,7 @@ import tensorflow as tf
 from tensorflow.keras.utils import to_categorical
 from tensorflow.python.client import device_lib
 
-from dl_model import define_model
+from dl_model import define_model, define_random_model
 
 device_lib.list_local_devices()
 
@@ -40,6 +41,7 @@ if __name__ == "__main__":
     config.read('config.ini')
     training_config = config['Training']
     in_file = config['TRS']['TracesStorageFile']
+    model_parameters_file = training_config['ModelParametersFile']
 
     # in_file = "../data/traces/" + sys.argv[1]
 
@@ -48,7 +50,26 @@ if __name__ == "__main__":
 
     tf.config.list_physical_devices('GPU')  # checking the availability of GPU
 
-    model = define_model(profiling_traces.shape[1])
+    """
+       If CNN is random
+    """
+    model, random_cnn_hyperparameters = define_random_model(profiling_traces.shape[1])
+
+    """
+    Here you can save the random hyperparameters to re-use them later in different rounds.
+    """
+    print(random_cnn_hyperparameters)
+
+    """
+    If CNN is fixed (CNN_best)
+    """
+    parameters_file = open(model_parameters_file, "w")
+    json.dump(random_cnn_hyperparameters, parameters_file)
+    parameters_file.close()
+
+
+    # model = define_model(profiling_traces.shape[1])
+
     model.summary()  # print the summary of the model
 
     optimizer = tf.keras.optimizers.RMSprop(lr=0.00001)

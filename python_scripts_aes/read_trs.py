@@ -9,7 +9,6 @@ import Trace as trs
 from funcs import hamming_lookup, aes_sbox
 
 
-
 def determineTrsSampleCoding(ts):
     if ts._sampleCoding == ts.CodingByte:
         samplesDataType = "int8"
@@ -51,11 +50,28 @@ def allocate_random_keys(keys):
 
 
 def rearrange_traces(raw_traces, raw_plaintexts, raw_ciphertexts, raw_key):
+    """
+    Rearragning required while attacking round 4
+    @param raw_traces:  raw traceset
+    @param raw_plaintexts: raw plaintexts
+    @param raw_ciphertexts: raw ciphertexts
+    @param raw_key: raw key set
+    @return: return the rearranged set of traces, plaintexts, ciphertexts and keys
+    """
     temp_traces = np.concatenate((raw_traces[1::2], raw_traces[::2]), axis=0)
     temp_plaintexts = np.concatenate((raw_plaintexts[1::2], raw_plaintexts[::2]), axis=0)
     temp_ciphertexts = np.concatenate((raw_ciphertexts[1::2], raw_ciphertexts[::2]), axis=0)
     temp_key = np.concatenate((raw_key[1::2], raw_key[::2]), axis=0)
     return temp_traces, temp_plaintexts, temp_ciphertexts, temp_key
+
+
+def add_gaussian_noise(traces, samplesDataType):
+    print("Adding Guassian Noise...")
+    mu = np.mean(traces)
+    sigma = np.std(traces, ddof=1)
+    traces = traces + np.random.normal(mu, sigma, (traces.shape[0], 1))
+    traces = traces.astype(samplesDataType)
+    return traces
 
 
 if __name__ == '__main__':
@@ -81,6 +97,7 @@ if __name__ == '__main__':
     raw_ciphertexts = np.empty(shape=(ts._numberOfTraces, data_space), dtype="uint8")
     raw_key = np.empty(shape=(ts._numberOfTraces, data_space), dtype="uint8")
     print("Populating arrays")
+
     for i in range(ts._numberOfTraces):
         t = ts.getTrace(i)
         raw_traces[i, :] = np.array(t._samples, dtype=samplesDataType)
@@ -88,11 +105,71 @@ if __name__ == '__main__':
         raw_ciphertexts[i, :] = np.array(t._data[data_space:], dtype="uint8")
         raw_key[i, :] = np.array(key[:data_space], dtype="uint8")
 
+    # j = 0
+    # for i in range(ts._numberOfTraces):
+    #     t = ts.getTrace(i)
+    #     raw_traces[i, :] = np.array(t._samples, dtype=samplesDataType)
+    #     raw_plaintexts[i, :] = np.array(t._data[:data_space], dtype="uint8")
+    #     raw_ciphertexts[i, :] = np.array(t._data[data_space:data_space*2], dtype="uint8")
+    #     raw_key[i, :] = np.array(t._data[data_space*2:], dtype="uint8")
+    # j = 0
+    # k = 0
+    # attacking_traces = np.empty(shape=(2000, ts._numberOfSamplesPerTrace), dtype=samplesDataType)
+    # attacking_plaintexts = np.empty(shape=(2000, data_space), dtype="uint8")
+    # attacking_ciphertexts = np.empty(shape=(2000, data_space), dtype="uint8")
+    # attacking_key = np.empty(shape=(2000, data_space), dtype="uint8")
+    # for i in range(ts._numberOfTraces):
+    #     t = ts.getTrace(i)
+    #     if key != list(t._data[data_space*2:]):
+    #         raw_traces[j, :] = np.array(t._samples, dtype=samplesDataType)
+    #         raw_plaintexts[j, :] = np.array(t._data[:data_space], dtype="uint8")
+    #         raw_ciphertexts[j, :] = np.array(t._data[data_space:data_space*2], dtype="uint8")
+    #         raw_key[j, :] = np.array(t._data[data_space*2:], dtype="uint8")
+    #         j = j+1
+    #     else:
+    #         attacking_traces[k, :] = np.array(t._samples, dtype=samplesDataType)
+    #         attacking_plaintexts[k, :] = np.array(t._data[:data_space], dtype="uint8")
+    #         attacking_ciphertexts[k, :] = np.array(t._data[data_space:data_space * 2], dtype="uint8")
+    #         attacking_key[k, :] = np.array(t._data[data_space * 2:], dtype="uint8")
+    #         k = k+1
+    #
+    # raw_traces = np.concatenate((raw_traces[:8000, :], attacking_traces), axis=0)
+    # raw_plaintexts = np.concatenate((raw_plaintexts[:8000, :], attacking_plaintexts), axis=0)
+    # raw_ciphertexts = np.concatenate((raw_ciphertexts[:8000, :], attacking_ciphertexts), axis=0)
+    # raw_key = np.concatenate((raw_key[:8000, :], attacking_key), axis=0)
+
+    # j = 5000
     # allocate_random_keys(raw_key[:2500])
+    # round 2 - 37000 - 39500
     # round 3 - 58000 - 60960
     # round 4 - 77500 - 80000
+    # count = j
+    # for i in range(j, ts._numberOfTraces):
+    #     t = ts.getTrace(i)
+    #     if key == list(t._data[data_space*2:]):
+    #         raw_traces[count, :] = np.array(t._samples, dtype=samplesDataType)
+    #         raw_plaintexts[count, :] = np.array(t._data[:data_space], dtype="uint8")
+    #         raw_ciphertexts[count, :] = np.array(t._data[data_space:data_space * 2], dtype="uint8")
+    #         raw_key[count, :] = np.array(t._data[data_space * 2:], dtype="uint8")
+    #         count = count+1
+    #
+    # count = 3000
+    # raw_traces = raw_traces[:count, ]
+    # raw_plaintexts = raw_plaintexts[:count, ]
+    # raw_ciphertexts = raw_ciphertexts[:count, ]
+    # raw_key = raw_key[:count, ]
+    #
+    # # adding gaussian noise
+    # raw_traces = add_gaussian_noise(raw_traces, samplesDataType)
+
+    # round 2 - different batch - 25200 - 26200
+    ## rearranging is required only for round 4 traces depending on how the dataset is arranged
+    ## In our dataset the rearranging was necessary.
     print("Reshuffling traces...")
     (raw_traces, raw_plaintexts, raw_ciphertexts, raw_key) = rearrange_traces(raw_traces, raw_plaintexts, raw_ciphertexts, raw_key) # rearrange to attain the right indexes for profiling and attack
+    # plot_trace(raw_traces[0])
+    # plot_trace(raw_traces[1])
+    # plot_trace(raw_traces[2])
 
     print("Preparing the traces for training...")
     traces = LabelledTraces(byte_attacked=leakage_details.getint('TargetKeyByteIndex'),
@@ -110,51 +187,3 @@ if __name__ == '__main__':
     # write_metadata_to_file("../data/traces/metadata_output.npz", raw_plaintexts, raw_ciphertexts)
     print("Labelled traces written to file %s. Ready to train!" % trs_file_details['TracesStorageFile'])
     # plot_trace(raw_traces[0])
-
-    # traces1 = LabelledTraces(2,1, "../data/traces/raw_traces/ATMega8515_raw_traces.h5")
-    # plot_trace(traces1.raw_traces[0])
-
-    # 3rd round traces
-    # 57750 - 78670 - total of 19120 features
-    # 58000-60960
-
-    # correlation between plaintexts and ciphertexts
-    # tt = raw_traces[:30, 58000:60960]
-    # # r = np.corrcoef(hyp, raw_traces[:, 58000:60960])
-    # print()
-    # num_point = tt.shape[1]
-    # num_traces = tt.shape[0]
-    # cpa_output = [0] * 256
-    # max_cpa = [0] * 256
-    #
-    # for guess_idx in range(256):
-    #     # print("Sub-key = %2d, hyp = %02x" % (b_num, k_guess))
-    #
-    #     # Initialize arrays and variables to zero
-    #     sum_num = np.zeros(num_point)
-    #     sum_den_1 = np.zeros(num_point)
-    #     sum_den_2 = np.zeros(num_point)
-    #     hyp = hamming_lookup[aes_sbox[raw_plaintexts[:num_traces, 0] ^ guess_idx]]
-    #     # hyp = np.zeros(num_traces)
-    #     # for t_num in range(num_traces):
-    #     #     hyp[t_num] = HW[intermediate(plaintext[t_num][byte_idx], guess_idx)]
-    #
-    #     h_mean = np.mean(hyp, dtype=np.float64)  # Mean of hypothesis
-    #     t_mean = np.mean(tt, axis=0, dtype=np.float64)  # Mean of all points in trace
-    #
-    #     # For each trace, do the following
-    #     for t_num in range(num_traces):
-    #         h_diff = (hyp[t_num] - h_mean)
-    #         t_diff = tt[t_num, :] - t_mean
-    #
-    #         sum_num += h_diff * t_diff
-    #         sum_den_1 += h_diff ** 2
-    #         sum_den_2 += t_diff ** 2
-    #
-    #     cpa_output[guess_idx] = sum_num / np.sqrt(sum_den_1 * sum_den_2)
-    #     max_cpa[guess_idx] = max(abs(cpa_output[guess_idx]))
-    #
-    # # print()
-    # # plt.plot(max_cpa)
-    # # plt.show()
-    # plot_trace(max_cpa)

@@ -1,6 +1,6 @@
 import tensorflow as tf
 from tensorflow.keras import layers
-
+import random
 
 def define_model(poi_count) -> tf.keras.Model:
     """
@@ -40,4 +40,89 @@ def define_model(poi_count) -> tf.keras.Model:
         ]
     )
 
+    return model
+
+
+def define_random_model(poi_count):
+    """
+    Architect and Config
+    """
+
+    neurons = random.choice([100, 200, 300, 400, 500, 600, 700, 800, 900, 1000])
+    layers_choice = random.choice([2, 3])
+    activation = random.choice(["relu", "selu", "elu", "tanh"])
+    kernel_initializer = random.choice(["random_uniform", "glorot_uniform", "he_uniform"])
+    conv_layers = random.choice([1, 2, 3, 4])
+
+    kernels = []
+    strides = []
+    filters = []
+
+    for conv_layer in range(1, conv_layers + 1):
+        kernels.append(random.choice([10, 12, 14, 16, 18, 20]))
+        strides.append(random.choice([5, 10]))
+        if conv_layer == 1:
+            filters.append(random.choice([8, 16, 24, 32]))
+        else:
+            filters.append(filters[conv_layer - 2] * 2)
+
+    random_cnn_hyperparameters = {
+        "neurons": neurons,
+        "layers": layers_choice,
+        "activation": activation,
+        "kernel_initializer": kernel_initializer,
+        "conv_layers": conv_layers,
+        "kernels": kernels,
+        "strides": strides,
+        "filters": filters,
+    }
+
+    model = tf.keras.Sequential()
+    for conv_layer in range(1, conv_layers + 1):
+        if conv_layer == 1:
+            model.add(
+                layers.Conv1D(kernel_size=kernels[conv_layer - 1], strides=strides[conv_layer - 1], filters=filters[conv_layer - 1],
+                       activation=activation, input_shape=(poi_count, 1)))
+        else:
+            model.add(
+                layers.Conv1D(kernel_size=kernels[conv_layer - 1], strides=strides[conv_layer - 1], filters=filters[conv_layer - 1],
+                       activation=activation))
+
+    model.add(layers.Flatten())
+    model.add(layers.Dense(neurons, activation=activation, kernel_initializer=kernel_initializer))
+    for i in range(layers_choice - 1):
+        model.add(layers.Dense(neurons, activation=activation, kernel_initializer=kernel_initializer))
+    model.add(layers.Dense(9, activation='softmax'))
+
+    return model, random_cnn_hyperparameters
+
+
+def rebuild_model(cnn_parameters, poi_count):
+    neurons = cnn_parameters["neurons"]
+    layers_choice = cnn_parameters["layers"]
+    activation = cnn_parameters["activation"]
+    kernel_initializer = cnn_parameters["kernel_initializer"]
+    conv_layers = cnn_parameters["conv_layers"]
+    kernels = cnn_parameters["kernels"]
+    strides = cnn_parameters["strides"]
+    filters = cnn_parameters["filters"]
+
+    model = tf.keras.Sequential()
+    for conv_layer in range(1, conv_layers + 1):
+        if conv_layer == 1:
+            model.add(
+                layers.Conv1D(kernel_size=kernels[conv_layer - 1], strides=strides[conv_layer - 1],
+                              filters=filters[conv_layer - 1],
+                              activation=activation, input_shape=(poi_count, 1)))
+        else:
+            model.add(
+                layers.Conv1D(kernel_size=kernels[conv_layer - 1], strides=strides[conv_layer - 1],
+                              filters=filters[conv_layer - 1],
+                              activation=activation))
+
+    model.add(layers.Flatten())
+    model.add(layers.Dense(neurons, activation=activation, kernel_initializer=kernel_initializer))
+    for i in range(layers_choice - 1):
+        model.add(layers.Dense(neurons, activation=activation, kernel_initializer=kernel_initializer))
+    model.add(layers.Dense(9, activation='softmax'))
     return model

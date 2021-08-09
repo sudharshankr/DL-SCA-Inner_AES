@@ -51,6 +51,21 @@ class LabelledTraces:
         """
         if self.hypothesis_round == 1:
             return hamming_lookup[aes_sbox[plaintexts[:, self.target_byte] ^ keys[:, self.target_byte]]]
+
+        elif self.hypothesis_round == 2:
+            m1 = 2
+            constant_byte = 0
+            delta = galois_mult_np(aes_sbox[constant_byte ^ keys[:, 5]], 3) \
+                    ^ galois_mult_np(aes_sbox[constant_byte ^ keys[:, 10]], 1) \
+                    ^ galois_mult_np(aes_sbox[constant_byte ^ keys[:, 15]], 1) ^ calc_round_key_byte(1, 0, keys)
+            hypothesis = hamming_lookup[aes_sbox[
+                            galois_mult_np(
+                                aes_sbox[
+                                    plaintexts[:, self.target_byte] ^ keys[:, self.target_byte]],
+                                m1)
+                            ^ delta]]
+            return hypothesis
+
         elif self.hypothesis_round == 3:
             constant_byte = 0
             delta = galois_mult_np(aes_sbox[constant_byte ^ keys[:, 5]], 3) \
