@@ -2,7 +2,7 @@
 
 filename='config.ini'
 
-for count in {15..50}
+for count in {5..15}
 do
   sed -i '' "s/ModelId = $((count-1))/ModelId = $count/" $filename
   python3 sca_dl_train_model.py
