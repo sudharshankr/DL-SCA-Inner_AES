@@ -266,10 +266,11 @@ if __name__ == "__main__":
     hyp_type = leakage_config['HypothesisType']
     batch_size = training_config.getint('BatchSize')
     model_id = training_config["ModelId"]
-    results_filename = "../data/attack_results/round_"+str(hypothesis)+"_random_model_results/results-model_"+model_id+"-leakage_rnd_" + str(leakage) \
+    prefix = training_config["Prefix"]
+    results_filename = "../data/attack_results/round_"+str(hypothesis)+"_random_model_results/"+prefix+"/results-model_"+model_id+"-leakage_rnd_" + str(leakage) \
                        + "-hypothesis_rnd_" + str(hypothesis) + "-" + hyp_type + "-" + str(byte_attacked) + ".npz"
 
-    plot_filename = "../../result_images/random_cnn_plots/round_"+str(hypothesis)+"/results-model_"+model_id+"-hypothesis_rnd_"+str(hypothesis)
+    plot_filename = "../../result_images/random_cnn_plots/round_"+str(hypothesis)+"/"+prefix+"/results-model_"+model_id+"-hypothesis_rnd_"+str(hypothesis)
     # Starting attack
     (attack_traces, attack_plaintexts, attack_keys) = load_attack_traces(traces_filename, attack_traces_count)  # loading attack traces
     with open(model_parameters_file, "r") as json_file:

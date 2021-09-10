@@ -16,7 +16,8 @@ if __name__ == "__main__":
     hyp_type = leakage_config['HypothesisType']
     batch_size = training_config.getint('BatchSize')
     model_id = training_config["ModelId"]
-    results_filename = "../data/attack_results/round_" + str(hypothesis) + "_random_model_results/results-model_" + model_id + "-leakage_rnd_" + str(leakage) \
+    prefix = training_config["Prefix"]
+    results_filename = "../data/attack_results/round_" + str(hypothesis) + "_random_model_results/"+prefix+"/results-model_" + model_id + "-leakage_rnd_" + str(leakage) \
                        + "-hypothesis_rnd_" + str(hypothesis) + "-" + hyp_type + "-" + str(byte_attacked) + ".npz"
 
     results = np.load(results_filename)
