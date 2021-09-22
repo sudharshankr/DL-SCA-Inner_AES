@@ -27,6 +27,13 @@ def plot_trace(trace):
 
 
 def plot_graph(ranks, traces_counts, key_probs=None):
+    """
+    Plot graph for key ranks vs. trace counts
+    @param ranks: List containing ranks
+    @param traces_counts: List containing trace counts corresponding to the ranks
+    @param key_probs: Probablity of that key guess
+    @return: matplotlib plot (can be saved as an image too)
+    """
     plt.figure(figsize=(15, 6))
     plt.title('Rank vs Traces Number')
     plt.xlabel('Number of traces')
@@ -114,17 +121,10 @@ if __name__ == '__main__':
             cpa_output[guess_idx] = sum_num / np.sqrt(sum_den_1 * sum_den_2)
             max_cpa[guess_idx] = max(abs(cpa_output[guess_idx]))
 
-        # print()
-        # plt.plot(max_cpa)
-        # plt.show()
         cpa_refs = np.argsort(max_cpa)[::-1]
-        # print(cpa_refs)
-        # Find Guess Entropy (GE)
-        # kr = list(cpa_refs).index(known_key)
         key_ranks.append(np.where(cpa_refs == known_key)[0])
         count_traces.append(num_traces)
 
-    # print("The key rank: ",kr)
     plot_graph(key_ranks, count_traces)
 
 

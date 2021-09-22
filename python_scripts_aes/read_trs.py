@@ -66,6 +66,15 @@ def rearrange_traces(raw_traces, raw_plaintexts, raw_ciphertexts, raw_key):
 
 
 def add_gaussian_noise(traces, samplesDataType):
+    """
+    Adding Gaussian noise to the traces
+    @param traces: Traces for which the noise needs to be computed
+    @type traces: np.ndarray
+    @param samplesDataType: Data type of the traces
+    @type samplesDataType: string
+    @return: Traces with Gaussian noise
+    @rtype: np.ndarray
+    """
     print("Adding Guassian Noise...")
     mu = np.mean(traces)
     sigma = np.std(traces, ddof=1)
@@ -167,9 +176,7 @@ if __name__ == '__main__':
     ## In our dataset the rearranging was necessary.
     print("Reshuffling traces...")
     (raw_traces, raw_plaintexts, raw_ciphertexts, raw_key) = rearrange_traces(raw_traces, raw_plaintexts, raw_ciphertexts, raw_key) # rearrange to attain the right indexes for profiling and attack
-    # plot_trace(raw_traces[0])
-    # plot_trace(raw_traces[1])
-    # plot_trace(raw_traces[2])
+
 
     print("Preparing the traces for training...")
     traces = LabelledTraces(byte_attacked=leakage_details.getint('TargetKeyByteIndex'),

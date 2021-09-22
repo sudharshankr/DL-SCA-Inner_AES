@@ -20,14 +20,23 @@ font = {'family': 'normal',
         'size': 11}
 
 def return_idx_16(key, d):
+    """
+    Combines known key and delta to return 16 bits
+    """
     return int('{0:08b}'.format(key) + '{0:08b}'.format(d), 2)
 
 
 def return_idx_24(key, d, g):
+    """
+    Combines known key, delta and gamma to return 24 bits
+    """
     return int('{0:08b}'.format(key) + '{0:08b}'.format(d) + '{0:08b}'.format(g), 2)
 
 
 def return_idx_32(key, d, g, t):
+    """
+    Combines known key, delta, gamma and theta to return 32 bits
+    """
     return int('{0:08b}'.format(key) + '{0:08b}'.format(d) + '{0:08b}'.format(g) + '{0:08b}'.format(t), 2)
 
 

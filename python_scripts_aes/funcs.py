@@ -81,6 +81,17 @@ def galois_mult_np(a, b):
 
 
 def calc_round_key_byte(rnd, idx_byte, keys):
+    """
+    Calculate key byte for a particular round
+    @param rnd: Target round
+    @type rnd: int
+    @param idx_byte: Index of the target byte
+    @type idx_byte: int
+    @param keys: Key bytes
+    @type keys: np.ndarray
+    @return: Round keys for target round
+    @rtype: np.ndarray
+    """
     expanded_key_bytes = np.zeros((keys.shape[0],), dtype="uint8")
     for i in range(keys.shape[0]):
         expanded_key_bytes[i] = key_schedule(keys[i])[rnd][idx_byte]
@@ -88,6 +99,9 @@ def calc_round_key_byte(rnd, idx_byte, keys):
 
 
 def hamming(n):
+    """
+    Return hamming weight of n
+    """
     return bin(int(n)).count("1")
 
 
@@ -96,6 +110,9 @@ v_gmul = np.vectorize(galois_mult)
 
 
 def write_to_npz(filename, ranks, trace_cnt, key_probs):
+    """
+    Write ranks, corresponding trace count and key probabilities of the key guesses to npz file
+    """
     print("Saving file")
     output_file = filename
     np.savez(output_file, ranks=ranks, trace_cnt=trace_cnt, key_probs=key_probs)

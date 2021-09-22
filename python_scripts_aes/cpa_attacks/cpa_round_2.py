@@ -34,6 +34,13 @@ font = {'family': 'normal',
 
 
 def write_to_npz(filename, ranks, trace_cnt, key_probs=None):
+    """
+    Write the ranks and their corresponding trace counts to specified file
+    @param filename: Name of the output file
+    @param ranks: Ranks list
+    @param trace_cnt:  Corresponding trace count list
+    @param key_probs:  Key probabilities
+    """
     print("Saving file")
     output_file = filename
     np.savez(output_file, ranks=ranks, trace_cnt=trace_cnt)
@@ -54,6 +61,13 @@ def determineTrsSampleCoding(ts):
 
 
 def plot_graph(ranks, traces_counts, key_probs=None):
+    """
+    Plot graph for key ranks vs. trace counts
+    @param ranks: List containing ranks
+    @param traces_counts: List containing trace counts corresponding to the ranks
+    @param key_probs: Probablity of that key guess
+    @return: matplotlib plot (can be saved as an image too)
+    """
     plt.rc('font', **font)
     plt.figure(figsize=(10, 6))
     plt.title('Rank vs Traces Number')
@@ -75,6 +89,11 @@ def return_idx_16(key, d):
 
 
 def return_correlations(guess_idx):
+    """
+    return partial correlation matrix. Split approach for large ccorrelation matrices
+    @param guess_idx: Starting guess ID of the correlation matrix
+    @return: max_cpa (pass by reference) list for the given set of guesses
+    """
     # print("Guess: %d" % guess_idx, end='\r', flush=True)
     # pbar.update(1)
     num = (h_diff[:, guess_idx].reshape((h_diff.shape[0], 1)) * t_diff).sum(axis=0)
@@ -83,13 +102,14 @@ def return_correlations(guess_idx):
     max_cpa[guess_idx] = max(abs(cpa_output))
     # return max(abs(cpa_output))
 
-
-# Even faster correlation trace computation
-# Takes the full matrix of predictions instead of just a column
-# O - (n,t) array of n traces with t samples each
-# P - (n,m) array of n predictions for each of the m candidates
-# returns an (m,t) correaltion matrix of m traces t samples each
 def correlationTraces(O, P):
+    """
+    Even faster correlation trace computation
+    Takes the full matrix of predictions instead of just a column
+    O - (n,t) array of n traces with t samples each
+    P - (n,m) array of n predictions for each of the m candidates
+    returns an (m,t) correaltion matrix of m traces t samples each
+    """
     (n, t) = O.shape  # n traces of t samples
     (n_bis, m) = P.shape  # n predictions for each of m candidates
 
@@ -106,6 +126,14 @@ def correlationTraces(O, P):
 
 
 def calc_avg_key_rank(raw_traces, num_traces, hyp, no_of_experiments):
+    """
+    Calculate the average rank across all experiments for all the guesses
+    @param raw_traces: raw traces
+    @param num_traces: number of traces
+    @param hyp: hypothesis matrix for all the guesses
+    @param no_of_experiments: no. of experiments to be carried out
+    @return: Average rank and the max_cpa list
+    """
     temp_key_ranks = []
     for n in tqdm(range(no_of_experiments), position=0, leave=True):
         sample_inst = random.sample(range(0, len(raw_traces)), num_traces)
@@ -123,7 +151,6 @@ def calc_avg_key_rank(raw_traces, num_traces, hyp, no_of_experiments):
 
     avg_rank = np.mean(temp_key_ranks)
     return int(avg_rank), max_cpa
-
 
 
 if __name__ == '__main__':
@@ -176,21 +203,6 @@ if __name__ == '__main__':
 
     for num_traces in range(100, 2010, 100):
         print("Calculating for %d traces" % num_traces)
-        # temp_key_ranks = []
-            # print("Experiment: %d\r" % n, end='', flush=True)
-            # sample_inst = random.sample(range(0, len(raw_traces)), num_traces)
-            # test_traces = raw_traces[sample_inst, :]
-            # test_hyp = hyp[sample_inst]
-            # # for trace_id in range(it_start, num_traces):
-            # #     hyp[trace_id, :] = calc_hypothesis_round_2(raw_plaintexts[trace_id, 0], guesses_range)
-            # max_cpa = np.zeros((1, 1))
-            # max_cpa = np.concatenate(
-            #         (max_cpa, np.amax(np.abs(correlationTraces(test_traces, hyp[sample_inst])), axis=1).reshape(guesses_range.shape[0], 1)), axis=0)
-            # max_cpa = max_cpa[1:, 0]
-            # cpa_refs = np.argsort(max_cpa)[::-1]
-            # key_rank = np.where(cpa_refs == real_idx)[0]
-            # # key_ranks.append(np.where(cpa_refs == real_idx)[0])
-            # temp_key_ranks.append(key_rank[0])
         avg_rank, max_cpa = calc_avg_key_rank(raw_traces, num_traces, hyp, no_of_experiments)
         print("Key rank: %d" % avg_rank)
         key_ranks.append(avg_rank)

@@ -2,6 +2,21 @@ from funcs import *
 
 
 def calc_terms(plaintexts, keys, idx=(0, 0, 0, 0), galois_multipliers=(2, 3, 1, 1), xor_key=(0, 0)):
+    """
+    Calculating intermediate bytes while computing the value of theta
+    @param plaintexts: Plaintext bytes
+    @type plaintexts: np.ndarray
+    @param keys: Keys bytes
+    @type keys: np.ndarray
+    @param idx: Index of the bytes used for computation
+    @type idx: set (int)
+    @param galois_multipliers: Galois Multipliers
+    @type galois_multipliers: set (int)
+    @param xor_key: constant byte used (in this case 0 is used as the constant bytes)
+    @type xor_key: constant byte used
+    @return: intermediate byte
+    @rtype: int
+    """
     # xor_key = (rnd, byte_idx)
     A = aes_sbox[galois_mult_np(aes_sbox[plaintexts[:, idx[0]] ^ keys[:, idx[0]]], galois_multipliers[0])
                  ^ galois_mult_np(aes_sbox[plaintexts[:, idx[1]] ^ keys[:, idx[1]]], galois_multipliers[1])
@@ -12,6 +27,15 @@ def calc_terms(plaintexts, keys, idx=(0, 0, 0, 0), galois_multipliers=(2, 3, 1, 
 
 
 def calc_delta(plaintexts, keys):
+    """
+    Calculating delta: depends on 3 plaintext bytes
+    @param plaintexts: Plaintext bytes
+    @type plaintexts: np.ndarray
+    @param keys: Key bytes
+    @type keys: np.ndarray
+    @return: delta
+    @rtype: int
+    """
     delta = galois_mult_np(aes_sbox[plaintexts[:, 5] ^ keys[:, 5]], 3) \
             ^ galois_mult_np(aes_sbox[plaintexts[:, 10] ^ keys[:, 10]], 1) \
             ^ galois_mult_np(aes_sbox[plaintexts[:, 15] ^ keys[:, 15]], 1) ^ calc_round_key_byte(1, 0, keys)
@@ -19,6 +43,15 @@ def calc_delta(plaintexts, keys):
 
 
 def calc_gamma(plaintexts, keys):
+    """
+    Calculating gamma: depends on 12 plaintext bytes
+    @param plaintexts: Plaintext bytes
+    @type plaintexts: np.ndarray
+    @param keys: Key bytes
+    @type keys: np.ndarray
+    @return: gamma
+    @rtype: int
+    """
     gamma_1 = galois_mult_np(aes_sbox[galois_mult_np(aes_sbox[plaintexts[:, 4] ^ keys[:, 4]], 1) \
                                       ^ galois_mult_np(aes_sbox[plaintexts[:, 9] ^ keys[:, 9]], 2) \
                                       ^ galois_mult_np(aes_sbox[plaintexts[:, 14] ^ keys[:, 14]], 3) \
@@ -41,6 +74,16 @@ def calc_gamma(plaintexts, keys):
 
 
 def calc_theta(plaintexts, keys):
+    """
+    Calculating theta: depends on all 16 plaintext bytes
+    Uses calc_terms for computing intermediate bytes
+    @param plaintexts: Plaintext bytes
+    @type plaintexts: np.ndarray
+    @param keys: Key bytes
+    @type keys: np.ndarray
+    @return: theta
+    @rtype: int
+    """
     u_1 = aes_sbox[galois_mult_np(calc_terms(plaintexts, keys, idx=(4, 9, 14, 3), galois_multipliers=(2, 3, 1, 1), xor_key=(1, 4)), 1)
                    ^ galois_mult_np(calc_terms(plaintexts, keys, idx=(8, 13, 2, 7), galois_multipliers=(1, 2, 3, 1), xor_key=(1, 9)), 2)
                    ^ galois_mult_np(calc_terms(plaintexts, keys, idx=(12, 1, 6, 11), galois_multipliers=(1, 1, 2, 3), xor_key=(1, 14)), 3)

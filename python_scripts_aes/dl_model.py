@@ -45,7 +45,9 @@ def define_model(poi_count) -> tf.keras.Model:
 
 def define_random_model(poi_count):
     """
-    Architect and Config
+    Architect and Config for generating random models
+    @param poi_count: number of points of interest (no. of selected features)
+    @type poi_count: int
     """
 
     neurons = random.choice([100, 200, 300, 400, 500, 600, 700, 800, 900, 1000])
@@ -98,6 +100,15 @@ def define_random_model(poi_count):
 
 
 def rebuild_model(cnn_parameters, poi_count):
+    """
+    Rebuilding the model from saved model parameters
+    @param cnn_parameters: The model parameters loaded from a file
+    @type cnn_parameters: dict
+    @param poi_count: number of points of interest
+    @type poi_count: int
+    @return: model with features
+    @rtype: tf.keras.Model
+    """
     neurons = cnn_parameters["neurons"]
     layers_choice = cnn_parameters["layers"]
     activation = cnn_parameters["activation"]

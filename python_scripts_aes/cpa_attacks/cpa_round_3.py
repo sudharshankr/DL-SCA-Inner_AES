@@ -47,6 +47,13 @@ def determineTrsSampleCoding(ts):
 
 
 def plot_graph(ranks, traces_counts, key_probs=None):
+    """
+    Plot graph for key ranks vs. trace counts
+    @param ranks: List containing ranks
+    @param traces_counts: List containing trace counts corresponding to the ranks
+    @param key_probs: Probablity of that key guess
+    @return: matplotlib plot (can be saved as an image too)
+    """
     plt.rc('font', **font)
     plt.figure(figsize=(10, 6))
     plt.title('Rank vs Traces Number')
@@ -83,12 +90,15 @@ def return_correlations(guess_idx):
     # return max(abs(cpa_output))
 
 
-# Even faster correlation trace computation
-# Takes the full matrix of predictions instead of just a column
-# O - (n,t) array of n traces with t samples each
-# P - (n,m) array of n predictions for each of the m candidates
-# returns an (m,t) correaltion matrix of m traces t samples each
+#
 def correlationTraces(O, P):
+    """
+    Even faster correlation trace computation
+    Takes the full matrix of predictions instead of just a column
+    O - (n,t) array of n traces with t samples each
+    P - (n,m) array of n predictions for each of the m candidates
+    returns an (m,t) correaltion matrix of m traces t samples each
+    """
     (n, t) = O.shape  # n traces of t samples
     (n_bis, m) = P.shape  # n predictions for each of m candidates
 
@@ -105,6 +115,14 @@ def correlationTraces(O, P):
 
 
 def calc_corr(batch_id, batch_step):
+    """
+    calculating correlation in batches
+    @param batch_id: batch no.
+    @type batch_id: int
+    @param batch_step: step size
+    @type batch_step: int
+    @return: correlation matrix
+    """
     # print("batch: %d" % batch_id)
     # hyp_temp = test_hyp[:, batch_id:batch_id + batch_step]
     temp_hyp = hyp[:, batch_id:batch_id + batch_step]
@@ -173,8 +191,6 @@ if __name__ == '__main__':
     # guesses_range = guesses_range.astype("uint8")
     # np.save("Guesses_range.npy", guesses_range)
     guesses_range = np.load("../Guesses_range_24.npy")
-    # cpa_output = [0] * guesses_range.shape[0]
-    # max_cpa = [0] * guesses_range.shape[0]
     it_start = 0
     no_of_experiments = 1
     hyp = np.zeros((total_traces, guesses_range.shape[0]))
@@ -192,27 +208,13 @@ if __name__ == '__main__':
         for n in tqdm(range(no_of_experiments), position=0, leave=True):
             sample_inst = random.sample(range(0, len(raw_traces)), num_traces)
             test_traces = raw_traces[sample_inst, :]
-            # for i, trace_id in enumerate(sample_inst):
-            #     hyp[i, :] = calc_hypothesis_round_3(raw_plaintexts[trace_id, 0], guesses_range)
-            # test_hyp = hyp[sample_inst]
-            # for trace_id in range(it_start, num_traces):
-            #     hyp[trace_id, :] = calc_hypothesis_round_3(raw_plaintexts[trace_id, 0], guesses_range)
-            # print("Done calculating the hypothoses...")
-            # print("Starting with the Guesses...")
             max_cpa = np.zeros((1, 1))
             batch_step = int(len(key_guesses) / 256)
-            # batches = [(batch_id, batch_step) for batch_id in range(0, len(key_guesses), batch_step)]
-            # pool = Pool(processes=2)
-            # temp_key_ranks = pool.starmap_async(calc_corr, batches).get()
             for batch_id in tqdm(range(0, len(key_guesses), batch_step), position=0, leave=True):
                 # hyp_temp = hyp[sample_inst, batch_id:batch_id + batch_step]
                 max_cpa = np.concatenate(
                     (max_cpa, np.amax(np.abs(correlationTraces(test_traces, hyp[sample_inst, batch_id:batch_id + batch_step])), axis=1).reshape(batch_step, 1)), axis=0)
                 # max_cpa = np.concatenate((max_cpa, max_cpa_temp), axis=0)
-            # map_res = pool.starmap_async(calc_corr, batches).get()
-            # for result in map_res:
-            #     max_cpa = np.concatenate((max_cpa, result), axis=0)
-            # max_cpa = np.concatenate((max_cpa, temp_array), axis=0)
             max_cpa = max_cpa[1:, 0]
             cpa_refs = np.argsort(max_cpa)[::-1]
             key_rank = np.where(cpa_refs == real_idx)[0]
@@ -226,10 +228,6 @@ if __name__ == '__main__':
 
     time_taken = time.time() - start_time
     print("Total time taken:%.2f seconds, %.2f minutes" % (time_taken, time_taken/60))
-    # print(len(max_cpa))
-    #[array([2918433]), array([722637]), array([93251]), array([157522]), array([21131]), array([3975]), array([1045]),
-     #array([591]), array([220]), array([36]), array([14]), array([22]), array([5]), array([1]), array([0]), array([0])]
     plot_graph(key_ranks, count_traces)
     write_to_npz(results_filename, key_ranks, count_traces)
     print("The guess is: ", int('{0:024b}'.format(np.argsort(max_cpa)[::-1][0])[:8], 2))
-    # int('{0:024b}'.format(key_probs.argsort()[-1])[:8], 2)
