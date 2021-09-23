@@ -1,4 +1,4 @@
-# DL-SCA against inner rounds of AES-128
+# DL-SCA against Inner Rounds of AES-128
 
 This project focusses on attacking the inner rounds of AES-128, particularly the second and the third rounds. This is implemented using Deep Learning models and compares its performance with that of CPA. The attack has been performed on power traces acquired on a [Pinata development board](https://www.riscure.com/product/pinata-training-target/) based on a 32-bit STM32F4 microcontroller with an ARM-based architecture and running a standard unprotected AES-128 look-up table implementation.
 
