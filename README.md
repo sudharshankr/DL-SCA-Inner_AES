@@ -12,4 +12,4 @@ All the configuration settings is done in `config.ini`. The attack stores the at
 
 The directory `cpa_attacks` contains the scripts for CPA. In order to perform the CPA attacks, like done for DL, the traces and their PoIs are first extracted from the given `.trs` file and stored in a `.npz` file. These extracted traces are then used by the attack scripts. As for the attack scripts, as their names suggest, `cpa_round_1.py` performs CPA for round 1 hypothesis, `cpa_round_2.py` for round 2 and `cpa_round_3.py` for round 3.
 
-This project was done as a part of my master thesis at TU Delft. The findings of this project can be found in the eprint archive [here](https://eprint.iacr.org/2021/981.pdf). You are always welcome to contibute by issuing pull requests :)
+This project was done as a part of my master thesis at TU Delft. The findings of this project can be found in the eprint archive [here](https://eprint.iacr.org/2021/981.pdf). You are always welcome to contibute by creating pull requests :)
